@@ -34,8 +34,8 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
     setLoading(true)
 
     try {
-      // Call backend API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/copilot`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/copilot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +130,8 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
       })
 
       // Get real swap transaction from backend (which will call Jupiter)
-      const swapResponse = await fetch('http://localhost:3001/api/swap/real', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const swapResponse = await fetch(`${apiUrl}/api/swap/real`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
