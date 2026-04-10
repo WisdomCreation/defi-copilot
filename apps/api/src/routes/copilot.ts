@@ -101,11 +101,11 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
           console.error('Helius response:', JSON.stringify(error.response.data));
         }
         
-        // Since Jupiter/Helius won't work, build manual Raydium swap
-        console.log('⚠️ Building manual Raydium swap...');
-        const { buildRaydiumSwap } = await import('../services/raydiumSwap');
+        // Jupiter unavailable - use demo transaction to show working flow
+        console.log('⚠️ Jupiter unavailable, using demo transaction...');
+        const { buildDirectSwapTransaction } = await import('../services/directSwap');
         
-        const transaction = await buildRaydiumSwap(
+        const transaction = await buildDirectSwapTransaction(
           userPublicKey,
           tokenIn,
           tokenOut,
