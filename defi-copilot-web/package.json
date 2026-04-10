@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",
+    "@jup-ag/api": "^6.0.48",
     "@jup-ag/react-hook": "^6.2.0",
     "@jup-ag/terminal": "^4.5.7",
     "@safe-global/safe-apps-provider": "^0.18.6",

@@ -128,24 +128,56 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         amountIn: pendingSwap.amountIn
       })
 
-      // Get real swap transaction from backend (which will call Jupiter)
-      const swapResponse = await fetch('/api/swap/real', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tokenIn: pendingSwap.tokenIn || 'SOL',
-          tokenOut: pendingSwap.tokenOut || 'USDC',
-          amountIn: pendingSwap.amountIn || '0.01',
-          userPublicKey: phantom.publicKey.toString(),
-        }),
-      })
-
-      if (!swapResponse.ok) {
-        const errorData = await swapResponse.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || 'Failed to build swap transaction')
+      // REAL JUPITER SWAP - Client-side to bypass network blocks
+      console.log('🔥 Building REAL Jupiter swap client-side...')
+      
+      const { createJupiterApiClient } = await import('@jup-ag/api')
+      const jupiterApi = createJupiterApiClient()
+      
+      const TOKEN_MINTS: Record<string, string> = {
+        SOL: 'So11111111111111111111111111111111111111112',
+        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       }
-
-      const { swapTransaction } = await swapResponse.json()
+      
+      const inputMint = TOKEN_MINTS[pendingSwap.tokenIn?.toUpperCase() || 'SOL']
+      const outputMint = TOKEN_MINTS[pendingSwap.tokenOut?.toUpperCase() || 'USDC']
+      const amount = Math.floor(parseFloat(pendingSwap.amountIn || '0.01') * 1e9)
+      
+      console.log('Getting Jupiter quote:', { inputMint, outputMint, amount })
+      
+      // Get best swap route from Jupiter
+      const quote = await jupiterApi.quoteGet({
+        inputMint,
+        outputMint,
+        amount,
+        slippageBps: 50, // 0.5% slippage
+      })
+      
+      if (!quote) {
+        throw new Error('No route found for this swap')
+      }
+      
+      console.log('✅ Jupiter quote received:', quote)
+      
+      // Get swap transaction
+      const swapResult = await jupiterApi.swapPost({
+        swapRequest: {
+          quoteResponse: quote,
+          userPublicKey: phantom.publicKey.toString(),
+          wrapAndUnwrapSol: true,
+          dynamicComputeUnitLimit: true,
+          prioritizationFeeLamports: {
+            priorityLevelWithMaxLamports: {
+              maxLamports: 10000000,
+              priorityLevel: 'high',
+            },
+          },
+        },
+      })
+      
+      console.log('✅ Jupiter swap transaction built!')
+      
+      const swapTransaction = swapResult.swapTransaction
 
       // Deserialize transaction
       const swapTransactionBuf = Buffer.from(swapTransaction, 'base64')
@@ -176,10 +208,10 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         {
           id: Date.now().toString(),
           role: 'assistant',
-          content: `✅ **Transaction Confirmed!**\n\n` +
-            `Your swap intent has been recorded on-chain.\n\n` +
-            `**View on Solscan:** https://solscan.io/tx/${signature}\n\n` +
-            `*Note: Full DEX swap execution with Raydium/Jupiter coming soon. This demonstrates the complete flow working end-to-end.*`,
+          content: `✅ **SWAP EXECUTED!**\n\n` +
+            `Your ${pendingSwap.tokenIn} → ${pendingSwap.tokenOut} swap completed successfully!\n\n` +
+            `**Transaction:** https://solscan.io/tx/${signature}\n\n` +
+            `Check your wallet - your tokens should arrive within seconds! 🎉`,
         },
       ])
       
