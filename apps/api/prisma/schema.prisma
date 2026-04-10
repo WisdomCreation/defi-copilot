@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  walletAddress String         @unique
+  chain         String         @default("ethereum")
+  createdAt     DateTime       @default(now())
+  lastActiveAt  DateTime       @default(now())
+  
+  orders        Order[]
+  alerts        PriceAlert[]
+  conversations Conversation[]
+  
+  @@index([walletAddress])
+}
+
+model Order {
+  id               String    @id @default(cuid())
+  userId           String
+  type             String    // "limit" | "stop_loss" | "dca" | "bridge"
+  tokenIn          String
+  tokenInAddress   String?
+  tokenOut         String
+  tokenOutAddress  String?
+  amountIn         String
+  amountUsd        String?
+  triggerPrice     String?
+  triggerCondition String?   // "above" | "below"
+  status           String    @default("watching") // "watching" | "filled" | "cancelled" | "failed"
+  signedTx         String?   @db.Text
+  txHash           String?
+  chain            String
+  bridgeTargetChain String?
+  dcaInterval      String?   // "daily" | "weekly" | "monthly"
+  dcaExecutions    Int       @default(0)
+  dcaMaxExecutions Int?
+  slippage         Float     @default(0.5)
+  estimatedGasUsd  String?
+  createdAt        DateTime  @default(now())
+  filledAt         DateTime?
+  cancelledAt      DateTime?
+  
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, status])
+  @@index([status, chain])
+  @@index([createdAt])
+}
+
+model PriceAlert {
+  id          String    @id @default(cuid())
+  userId      String
+  asset       String
+  assetSymbol String
+  condition   String    // "above" | "below"
+  targetPrice Float
+  currentPrice Float?
+  triggered   Boolean   @default(false)
+  active      Boolean   @default(true)
+  chain       String    @default("ethereum")
+  createdAt   DateTime  @default(now())
+  triggeredAt DateTime?
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, active])
+  @@index([triggered, active])
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  userId        String
+  walletAddress String
+  chain         String
+  messages      Message[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([walletAddress])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String       // "user" | "assistant"
+  content        String       @db.Text
+  intent         Json?
+  quote          Json?
+  createdAt      DateTime     @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model Transaction {
+  id            String    @id @default(cuid())
+  orderId       String?
+  walletAddress String
+  chain         String
+  txHash        String    @unique
+  type          String    // "swap" | "limit" | "stop_loss" | "dca" | "bridge"
+  tokenIn       String
+  tokenOut      String
+  amountIn      String
+  amountOut     String?
+  status        String    // "pending" | "confirmed" | "failed"
+  gasUsed       String?
+  gasPrice      String?
+  blockNumber   Int?
+  createdAt     DateTime  @default(now())
+  confirmedAt   DateTime?
+  
+  @@index([walletAddress])
+  @@index([txHash])
+  @@index([status])
+  @@index([createdAt])
+}

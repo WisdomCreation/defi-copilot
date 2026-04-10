@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeFi Copilot — Complete Command Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#060E20;--navy2:#0A1530;--purple:#534AB7;--purpleL:#7B70FF;--white:#FFFFFF;--gray:#8B8FAD;--grayL:#C8CCE8;--teal:#00C9A7;--amber:#FFB347;--red:#FF6B6B;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.13);--surface:rgba(255,255,255,0.04);--surface2:rgba(255,255,255,0.07)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(83,74,183,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(83,74,183,0.04) 1px,transparent 1px);background-size:52px 52px}
+.z1{position:relative;z-index:1}
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,14,32,0.95);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;display:flex;align-items:center;gap:9px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--purple);box-shadow:0 0 10px var(--purpleL);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.pill{font-family:'DM Mono',monospace;font-size:11px;color:var(--gray);background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:3px 12px}
+.hero{text-align:center;padding:72px 40px 52px;position:relative}
+.hglow{position:absolute;width:500px;height:500px;border-radius:50%;background:rgba(83,74,183,0.13);filter:blur(80px);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none}
+.htag{display:inline-flex;align-items:center;gap:7px;background:rgba(83,74,183,0.12);border:1px solid rgba(83,74,183,0.28);border-radius:20px;padding:5px 16px;font-size:12px;color:var(--grayL);margin-bottom:26px}
+.htag-dot{width:5px;height:5px;border-radius:50%;background:var(--teal)}
+h1{font-family:'Syne',sans-serif;font-size:clamp(38px,6vw,68px);font-weight:800;line-height:1.05;letter-spacing:-1.5px;margin-bottom:14px}
+h1 .acc{color:var(--purpleL)}
+.hsub{font-size:16px;color:var(--gray);max-width:480px;margin:0 auto 36px;line-height:1.7}
+.hstats{display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap}
+.hstat{text-align:center}
+.hstat-n{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--purpleL)}
+.hstat-l{font-size:11px;color:var(--gray);margin-top:2px}
+.hsep{width:1px;height:36px;background:var(--border2)}
+.search-bar{padding:0 40px 0;margin:0 0 0}
+.sinput{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:13px 16px 13px 42px;font-size:14px;color:var(--white);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+.sinput:focus{border-color:var(--purple)}
+.sinput::placeholder{color:var(--gray)}
+.sicon{position:absolute;left:56px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:16px;pointer-events:none}
+.tabs-wrap{padding:0 40px;position:sticky;top:60px;z-index:90;background:rgba(6,14,32,0.97);border-bottom:1px solid var(--border);backdrop-filter:blur(20px)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0}
+.tab{padding:6px 14px;border-radius:20px;border:1px solid var(--border2);font-size:12px;font-weight:500;cursor:pointer;color:var(--gray);background:transparent;transition:all .18s;font-family:'DM Sans',sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.tab-c{font-family:'DM Mono',monospace;font-size:10px;background:rgba(255,255,255,0.07);border-radius:10px;padding:1px 6px}
+.tab.on{background:var(--purple);color:var(--white);border-color:var(--purple)}
+.tab.on .tab-c{background:rgba(255,255,255,0.2)}
+.tab:hover:not(.on){border-color:var(--purpleL);color:var(--purpleL)}
+.content{padding:28px 40px 72px;max-width:1280px;margin:0 auto}
+.cat-hdr{display:flex;align-items:flex-start;gap:14px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.cat-ico{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.cat-t{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;margin-bottom:5px}
+.cat-s{font-size:13px;color:var(--gray);line-height:1.6;max-width:600px}
+.cat-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.cmeta{font-family:'DM Mono',monospace;font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid var(--border2);color:var(--gray)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:11px}
+.cmd{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:17px;cursor:default;transition:all .2s}
+.cmd:hover{border-color:rgba(83,74,183,0.5);background:var(--surface2);transform:translateY(-1px)}
+.cmd-v{font-family:'DM Mono',monospace;font-size:12px;color:var(--purpleL);line-height:1.5;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.cmd-e{font-size:12px;color:var(--gray);line-height:1.65;margin-bottom:9px}
+.cmd-tags{display:flex;gap:4px;flex-wrap:wrap}
+.t{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;border:1px solid}
+.tp{background:rgba(83,74,183,0.15);color:#AFA9EC;border-color:rgba(83,74,183,0.3)}
+.tt{background:rgba(0,201,167,0.1);color:#5DCAA5;border-color:rgba(0,201,167,0.2)}
+.ta{background:rgba(255,179,71,0.1);color:#FFB347;border-color:rgba(255,179,71,0.2)}
+.tr{background:rgba(255,107,107,0.1);color:#FF6B6B;border-color:rgba(255,107,107,0.2)}
+.tg{background:rgba(255,255,255,0.05);color:var(--gray);border-color:var(--border2)}
+.qa-sec{background:var(--navy2);border-top:1px solid var(--border);padding:56px 40px}
+.qa-inner{max-width:860px;margin:0 auto}
+.sec-tag{font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.sec-t{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;margin-bottom:6px}
+.sec-s{font-size:14px;color:var(--gray);margin-bottom:36px}
+.qa{border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.qa:hover{border-color:rgba(83,74,183,0.35)}
+.qa-q{display:flex;align-items:center;gap:11px;padding:16px 18px;cursor:pointer;background:var(--surface)}
+.qa-n{font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);background:rgba(83,74,183,0.15);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qa-qt{font-size:14px;font-weight:500;flex:1}
+.qa-tog{font-size:18px;color:var(--gray);transition:transform .2s;flex-shrink:0}
+.qa.open .qa-tog{transform:rotate(45deg);color:var(--purpleL)}
+.qa-a{display:none;padding:0 18px 18px 53px;font-size:13px;color:var(--gray);line-height:1.8}
+.qa.open .qa-a{display:block}
+.qa-a strong{color:var(--white);font-weight:500}
+.qa-a code{font-family:'DM Mono',monospace;font-size:11px;background:rgba(83,74,183,0.15);padding:1px 6px;border-radius:4px;color:var(--purpleL)}
+.diag{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-top:11px;font-family:'DM Mono',monospace;font-size:11px;color:var(--grayL);line-height:2.1}
+.da{color:var(--purple)}.db{color:var(--teal)}.dc{color:var(--gray);font-style:italic}
+.comp-sec{padding:56px 40px;max-width:860px;margin:0 auto}
+.comp-card{border:1px solid var(--border2);border-radius:18px;padding:26px;background:var(--surface)}
+.comp-hdr{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.comp-logo{width:46px;height:46px;border-radius:11px;background:rgba(83,74,183,0.2);display:flex;align-items:center;justify-content:center;font-size:17px;font-family:'Syne',sans-serif;font-weight:800;color:var(--purpleL)}
+.comp-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:700}
+.comp-url{font-family:'DM Mono',monospace;font-size:11px;color:var(--gray)}
+.vtag{display:inline-flex;align-items:center;gap:5px;padding:4px 13px;border-radius:20px;font-size:12px;font-weight:500;margin-bottom:14px;background:rgba(255,179,71,0.12);color:var(--amber);border:1px solid rgba(255,179,71,0.25)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:14px}
+.cbox{background:rgba(0,0,0,0.2);border-radius:9px;padding:13px}
+.cbox-t{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+.cbox-t.red{color:var(--red)}.cbox-t.grn{color:var(--teal)}
+.cp{font-size:12px;color:var(--gray);display:flex;gap:6px;margin-bottom:4px;line-height:1.5}
+.cp::before{content:'•';flex-shrink:0}
+.verdict{font-size:12px;color:var(--gray);margin-top:14px;padding-top:14px;border-top:1px solid var(--border);line-height:1.7}
+footer{text-align:center;padding:28px;border-top:1px solid var(--border);background:var(--navy)}
+.ft{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:6px}
+.fs{font-size:12px;color:var(--gray)}
+@media(max-width:700px){
+  nav,.hero,.search-bar,.tabs-wrap,.content,.qa-sec,.comp-sec{padding-left:16px;padding-right:16px}
+  .grid{grid-template-columns:1fr}
+  .cgrid{grid-template-columns:1fr}
+  .hstats{gap:14px}
+  h1{font-size:36px}
+}
+</style>
+</head>
+<body>
+<div class="z1">
+
+<nav>
+  <div class="logo"><div class="dot"></div>DeFi Copilot</div>
+  <div class="pill" id="nav-count">105 commands</div>
+</nav>
+
+<div class="hero">
+  <div class="hglow"></div>
+  <div class="htag"><div class="htag-dot"></div>Complete command &amp; service library</div>
+  <h1>Everything you can say to<br><span class="acc">DeFi Copilot</span></h1>
+  <p class="hsub">Every command, every service, every use case. From a simple swap to a fully automated private trading strategy.</p>
+  <div class="hstats">
+    <div class="hstat"><div class="hstat-n" id="total-n">105</div><div class="hstat-l">Commands</div></div>
+    <div class="hsep"></div>
+    <div class="hstat"><div class="hstat-n">10</div><div class="hstat-l">Categories</div></div>
+    <div class="hsep"></div>
+    <div class="hstat"><div class="hstat-n">22+</div><div class="hstat-l">Services</div></div>
+    <div class="hsep"></div>
+    <div class="hstat"><div class="hstat-n">5</div><div class="hstat-l">Chains</div></div>
+  </div>
+</div>
+
+<div class="search-bar" style="position:relative;padding:16px 40px">
+  <div class="sicon">&#9906;</div>
+  <input class="sinput" id="srch" placeholder='Search commands... e.g. "anonymous", "limit order", "yield", "tax"' oninput="doSearch(this.value)">
+</div>
+
+<div class="tabs-wrap"><div class="tabs" id="tab-bar"></div></div>
+<div class="content" id="content"></div>
+
+<div class="qa-sec">
+  <div class="qa-inner">
+    <div class="sec-tag">Technical Q&amp;A</div>
+    <div class="sec-t">How does it actually work?</div>
+    <div class="sec-s">Your 4 most important questions answered honestly.</div>
+
+    <div class="qa" onclick="this.classList.toggle('open')">
+      <div class="qa-q"><div class="qa-n">1</div><div class="qa-qt">Is it Claude API or code that performs the trades?</div><div class="qa-tog">+</div></div>
+      <div class="qa-a"><strong>Both — they each do a different job.</strong><br><br>
+        <strong>Claude API</strong> is the brain. It reads what the user typed and returns structured instructions like <code>{ action: "swap", tokenIn: "ETH", amount: 500 }</code>. Claude never touches money or executes anything.<br><br>
+        <strong>Your backend code</strong> is the hands. It receives Claude's output, calls the right trading API (1inch, Jupiter, Gelato), builds the transaction calldata, and sends it to the user's wallet for signing.<br><br>
+        <strong>The user's wallet</strong> is the lock. Nothing executes until the user approves in MetaMask. Private keys never leave their device.
+        <div class="diag">
+          <span class="dc">User types: "Swap $500 ETH to USDC"</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  Claude API</span> <span class="dc">→ parses intent → returns JSON params</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  Your backend</span> <span class="dc">→ calls 1inch → builds calldata</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  User wallet</span> <span class="dc">→ user signs in MetaMask → tx broadcasts</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  Blockchain</span> <span class="dc">→ atomic swap executes → tokens arrive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qa" onclick="this.classList.toggle('open')">
+      <div class="qa-q"><div class="qa-n">2</div><div class="qa-qt">Do I need to pay for all the third-party service APIs?</div><div class="qa-tog">+</div></div>
+      <div class="qa-a"><strong>Most are completely free to start. You only pay as you scale.</strong><br><br>
+        Free to integrate: <code>1inch API</code>, <code>Jupiter</code>, <code>LI.FI bridge SDK</code>, <code>Alchemy</code> (300M units/month free), <code>Helius Solana</code>, <code>CoinGecko</code>, <code>Railgun</code>, <code>Umbra Protocol</code>, <code>DeFiLlama</code> — all completely free at MVP scale.<br><br>
+        Small costs: <code>Claude API</code> (~$50/month for 1,000 users), <code>Gelato</code> (~$0.01–0.05 per automation execution), <code>Koinly</code> (per tax report generated), <code>Houdini/GhostPay</code> (integration partnership fee).<br><br>
+        <strong>Total burn before revenue: ~$80–120/month.</strong> You can validate the entire product for the cost of a dinner out.
+      </div>
+    </div>
+
+    <div class="qa" onclick="this.classList.toggle('open')">
+      <div class="qa-q"><div class="qa-n">3</div><div class="qa-qt">What happens to limit orders when the user closes the browser?</div><div class="qa-tog">+</div></div>
+      <div class="qa-a"><strong>Your server keeps running 24/7 — the user's browser is completely irrelevant.</strong><br><br>
+        When a user sets a limit order, they sign it once (off-chain, zero gas). The signed bytes are stored in your database on Railway. A <code>BullMQ</code> background job on your server checks Chainlink price feeds every 12 seconds — around the clock, whether the user is online or not.<br><br>
+        When the trigger fires, your server broadcasts the pre-signed transaction. Swap executes. User wakes up with a push notification: "Your SOL order filled at $99.80."<br><br>
+        For DCA and recurring automation, <code>Gelato Network</code> acts as the decentralized executor — it monitors and triggers even if your server has brief downtime.
+        <div class="diag">
+          <span class="dc">User sets order → signs once → closes browser</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  YOUR SERVER (Railway)</span> <span class="dc">→ runs 24/7 without stopping</span><br>
+          <span class="da">  ↓  checks every 12 seconds via Chainlink</span><br>
+          <span class="db">  SOL price hits $99.80</span> <span class="dc">→ condition triggered ✓</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  Server broadcasts</span> <span class="dc">pre-signed tx to blockchain</span><br>
+          <span class="da">  ↓</span><br>
+          <span class="db">  User notified</span> <span class="dc">→ "SOL order filled at $99.80 ✓"</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qa" onclick="this.classList.toggle('open')">
+      <div class="qa-q"><div class="qa-n">4</div><div class="qa-qt">Which AI model should power the copilot?</div><div class="qa-tog">+</div></div>
+      <div class="qa-a"><strong>Use different models for different jobs — not one model for everything.</strong><br><br>
+        <code>Claude Sonnet</code> → primary brain for intent parsing. Best at following complex instructions and returning reliable JSON. "Buy $200 ETH only if gas is under 15 gwei" — Claude handles multi-condition logic without errors.<br><br>
+        <code>GPT-4o audio</code> → voice commands. Its audio transcription is the best available. Users can speak trades on mobile — nobody else in DeFi has this feature.<br><br>
+        <code>Perplexity API</code> → live market context. When users ask "what's happening with SOL today?" — Perplexity searches current news. Claude alone has no live internet access.<br><br>
+        <strong>Budget: ~$50–80/month at 1,000 active users.</strong> AI is your cheapest cost and your biggest differentiator.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comp-sec">
+  <div class="sec-tag">Competitor analysis</div>
+  <div class="sec-t" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;margin-bottom:6px">MyClaw.ai — should you worry?</div>
+  <div class="sec-s" style="font-size:14px;color:var(--gray);margin-bottom:24px">You flagged this as a potential competitor. Here is the honest breakdown.</div>
+  <div class="comp-card">
+    <div class="comp-hdr">
+      <div class="comp-logo">MC</div>
+      <div><div class="comp-name">MyClaw.ai</div><div class="comp-url">myclaw.ai — launched February 2026</div></div>
+    </div>
+    <div class="vtag">⚠ Not a direct competitor — completely different product</div>
+    <p style="font-size:13px;color:var(--gray);line-height:1.75">MyClaw is a <strong>hosting platform for OpenClaw</strong> — a general-purpose AI agent. It runs AI agents on a server for $19/month. Technical users can configure it to do crypto trading as one of thousands of use cases. It is NOT a purpose-built DeFi product. Real reviews describe crashes, disappearing messages, and hidden billing. It targets developers who want to self-host AI. You're targeting crypto users who want a clean product that just works.</p>
+    <div class="cgrid">
+      <div class="cbox"><div class="cbox-t red">Their weaknesses</div>
+        <div class="cp">General purpose — no DeFi UX at all</div>
+        <div class="cp">Requires technical setup (Docker, config)</div>
+        <div class="cp">No privacy layer (Houdini, Railgun, GhostPay)</div>
+        <div class="cp">No built-in 1inch or Jupiter routing</div>
+        <div class="cp">Crashes and instability reported by users</div>
+        <div class="cp">Misleading pricing — credits on top of subscription</div>
+      </div>
+      <div class="cbox"><div class="cbox-t grn">Your advantages</div>
+        <div class="cp">Purpose-built for DeFi — zero setup needed</div>
+        <div class="cp">Full privacy stack (Houdini, GhostPay, Railgun)</div>
+        <div class="cp">Non-custodial — user signs everything</div>
+        <div class="cp">Best-price routing built in (1inch, Jupiter)</div>
+        <div class="cp">Clean consumer UI — no technical knowledge needed</div>
+        <div class="cp">Transparent simple pricing model</div>
+      </div>
+    </div>
+    <div class="verdict"><strong style="color:var(--teal)">Verdict:</strong> MyClaw is infrastructure for builders who want to self-host AI. You are building a consumer DeFi product. Completely different target users and value propositions. Watch them but do not be intimidated by them.</div>
+  </div>
+</div>
+
+<footer>
+  <div class="ft"><div class="dot"></div>DeFi Copilot</div>
+  <div class="fs">Complete command library — 10 categories · 105+ commands · 22 integrated services</div>
+</footer>
+
+</div>
+<script>
+const CATS=[
+{id:'trading',icon:'⇄',col:'rgba(83,74,183,0.2)',lbl:'Trading',sub:'Every order type — swaps, limits, stop-loss, DCA, bridge, leverage',svcs:['1inch','Jupiter','Gelato','LI.FI','CoW Protocol'],cmds:[
+{v:'Swap $500 ETH to USDC at best rate',e:'Market swap — AI queries 1inch, Uniswap, and CoW Protocol simultaneously and picks the best price. Shows rate, gas and slippage before you confirm.',ts:['tt','tt','tg'],tn:['1inch','CoW Protocol','Free']},
+{v:'Swap all my ETH to USDC',e:'Full position swap — reads your exact wallet balance, calculates the full amount, asks for confirmation once.',ts:['tt','tg'],tn:['1inch','EVM']},
+{v:'Buy $1,000 of SOL right now',e:'Fiat-denominated buy — AI converts to token amount at current price and routes through Jupiter on Solana.',ts:['tt','tg'],tn:['Jupiter','Solana']},
+{v:'Set a limit order: buy SOL when it hits $100',e:'Limit order — you sign once gas-free. AI monitors price 24/7 on your backend server and auto-executes via Gelato when triggered.',ts:['tp','ta'],tn:['Limit Orders','Gelato']},
+{v:'Sell my ETH if it drops below $3,000',e:'Stop-loss — pre-signed transaction stored on your server, broadcasts automatically when price falls to your level.',ts:['tp','ta'],tn:['Stop-loss','Gelato']},
+{v:'Take profit on my SOL at $200',e:'Take-profit order — AI auto-sells your SOL when price reaches your target. You stay in the trade until it pays.',ts:['tp','ta'],tn:['Auto-execute','Gelato']},
+{v:'Buy $200 ETH every week for 10 weeks',e:'DCA — Dollar-cost averaging via Gelato. Runs on schedule on your server whether you are online or not.',ts:['tp','ta'],tn:['DCA','Gelato']},
+{v:'Bridge 500 USDC from Ethereum to Base',e:'Cross-chain bridge — LI.FI finds the cheapest and fastest route across 20+ bridges automatically.',ts:['tt','tt'],tn:['LI.FI','Cross-chain']},
+{v:'Move all my tokens from Arbitrum to Ethereum',e:'Multi-asset bridge — AI inventories all your tokens and queues transactions in optimal cost order.',ts:['tp','tt'],tn:['LI.FI','Multi-asset']},
+{v:'Rebalance my portfolio to 60% ETH, 40% SOL',e:'Portfolio rebalance — AI calculates required swaps and executes in the cheapest single-session route.',ts:['tp','ta'],tn:['Rebalance','AI']},
+{v:'Swap ETH to USDC with MEV protection',e:'MEV-protected swap via CoW Protocol — bundles your order to prevent front-running bots taking value from your trade.',ts:['tp','tt'],tn:['CoW Protocol','MEV shield']},
+{v:'Buy ETH with 3x leverage',e:'Leveraged long on dYdX or GMX — AI explains your liquidation price clearly before you confirm. Advanced users only.',ts:['tr','ta'],tn:['dYdX/GMX','Leverage']},
+{v:'Short BTC with $500',e:'Short perpetual position — AI opens via GMX or dYdX with full risk disclosure shown on screen.',ts:['tr','ta'],tn:['GMX','Perpetuals']},
+{v:'Sell exactly half my ETH position',e:'Partial sell — AI calculates 50% of your current ETH balance and executes that exact portion only.',ts:['tt','tg'],tn:['Partial','Safe']},
+]},
+{id:'privacy',icon:'◎',col:'rgba(83,74,183,0.25)',lbl:'Privacy',sub:'Your biggest differentiator — anonymous transactions, ZK proofs, stealth addresses',svcs:['Houdini','GhostPay','Railgun','Umbra','Chainalysis'],cmds:[
+{v:'Send 0.5 ETH to 0x... anonymously',e:'Anonymous send via Houdini Swap — breaks the on-chain trail between your wallet and the destination completely.',ts:['tp','tp'],tn:['Houdini','Untraceable']},
+{v:'Swap $1,000 ETH to USDC privately',e:'Private swap via Houdini — transaction is routed through privacy pools and not visible on standard block explorers.',ts:['tp','tp'],tn:['Houdini','Private']},
+{v:'Send this payment via GhostPay',e:'Anonymous payment via GhostPay — breaks wallet linkability. Recipient gets funds, your identity is obscured on-chain.',ts:['tp','tt'],tn:['GhostPay','Anonymous']},
+{v:'Do a full ZK private swap',e:'Railgun ZK swap — shields tokens inside a zero-knowledge proof pool. Amounts and participants are mathematically hidden from everyone.',ts:['tp','tp'],tn:['Railgun','ZK proof']},
+{v:'Transfer USDC without revealing my wallet balance',e:'ZK-shielded transfer via Railgun — even validators cannot see amounts or participants. Maximum on-chain privacy.',ts:['tp','tp'],tn:['Railgun','Full ZK']},
+{v:'Generate a stealth address for receiving payments',e:'Umbra Protocol stealth address — creates a fresh one-time receive address so multiple senders cannot link payments together.',ts:['tp','tt'],tn:['Umbra','Stealth']},
+{v:'Check if this wallet address is flagged',e:'Risk screening via Chainalysis — checks for OFAC sanctions, hack involvement, fraud databases, and mixer usage history.',ts:['tp','tt'],tn:['Chainalysis','Risk check']},
+{v:'Is it safe to receive from this wallet?',e:'Counterparty check — screens the sending wallet for risk flags before you accept funds from it.',ts:['tp','tt'],tn:['Chainalysis','Safety']},
+{v:'Shield my ETH for private DeFi',e:'Railgun shield — moves your ETH into a private shielded balance. You can now do DeFi without balance being visible.',ts:['tp','ta'],tn:['Railgun','Shield']},
+{v:'Enable privacy mode for all my trades this session',e:'Session privacy mode — all trades route through Houdini by default for the entire session until you toggle off.',ts:['tp','tp'],tn:['Houdini','Session']},
+{v:'Send private payroll to my team',e:'Anonymous payroll via GhostPay and Houdini — each salary is sent privately so staff cannot see each other\'s compensation.',ts:['tp','tp'],tn:['GhostPay','Houdini']},
+{v:'Receive funds without exposing my main wallet',e:'Stealth receive — AI generates a fresh stealth address, you share it with senders. Funds arrive unlinkable to your real wallet.',ts:['tp','tt'],tn:['Umbra','Private receive']},
+]},
+{id:'yield',icon:'%',col:'rgba(0,201,167,0.15)',lbl:'Yield & lending',sub:'Turn idle assets into earnings — best APY finder, lending, borrowing, liquid staking',svcs:['Aave','Compound','DeFiLlama','Lido','Gelato'],cmds:[
+{v:'What is the best yield for my USDC right now?',e:'Yield scanner via DeFiLlama — searches Aave, Compound, Curve, and 50+ protocols for best APY with a risk rating for each.',ts:['tt','tt'],tn:['DeFiLlama','Aave']},
+{v:'Earn yield on my USDC automatically',e:'AI picks the best APY option, explains the risk, and deposits to the winning protocol in one step. No manual searching.',ts:['tt','tt'],tn:['Aave','DeFiLlama']},
+{v:'Deposit 1,000 USDC to Aave',e:'Direct Aave deposit — AI builds the supply transaction, shows expected APY, executes when you confirm.',ts:['tt','tg'],tn:['Aave','Lending']},
+{v:'Move my USDC to the highest yield available',e:'Yield optimizer — withdraws from current protocol, scans all alternatives, deposits to the highest APY winner.',ts:['tp','tt'],tn:['DeFiLlama','Optimize']},
+{v:'Borrow 500 USDC against my ETH',e:'Collateralized borrow via Aave — AI shows LTV ratio, liquidation price, and borrow rate in plain English before executing.',ts:['ta','tt'],tn:['Aave','Borrow']},
+{v:'What is my Aave liquidation risk?',e:'Health factor check — tells you exactly how far ETH can drop before your position gets liquidated, updated live.',ts:['tt','tt'],tn:['Aave','Risk']},
+{v:'Add more collateral to avoid liquidation',e:'Safety top-up — AI calculates exactly how much ETH to add to bring health factor back to a safe level.',ts:['tp','tt'],tn:['Aave','Safety']},
+{v:'Find a stablecoin yield above 8%',e:'Filtered yield search — all stablecoin pools above your APY target, ranked by protocol age, audits, and TVL.',ts:['tt','tt'],tn:['DeFiLlama','Stablecoin']},
+{v:'Stake my ETH for staking rewards',e:'ETH liquid staking via Lido or Rocket Pool — AI compares both current APY options before you choose.',ts:['tt','tg'],tn:['Lido','Staking']},
+{v:'What is my total yield earned this month?',e:'Yield report — tallies all interest and rewards earned across every protocol, net of gas costs paid.',ts:['tt','tg'],tn:['On-chain','Report']},
+{v:'Auto-compound my Aave yield every week',e:'Automated compounding via Gelato — every 7 days AI claims your interest and reinvests it automatically.',ts:['tp','ta'],tn:['Aave','Gelato']},
+{v:'Withdraw my entire Aave position',e:'Full exit — AI unstakes and withdraws your collateral plus all accrued interest in a single optimised transaction.',ts:['tt','tt'],tn:['Aave','Withdraw']},
+]},
+{id:'portfolio',icon:'◫',col:'rgba(55,138,221,0.15)',lbl:'Portfolio',sub:'Full picture of your holdings across every chain, protocol, and wallet',svcs:['Alchemy','Helius','CoinGecko','Push Protocol'],cmds:[
+{v:'What is my total portfolio value?',e:'Multi-chain portfolio — reads wallets across Ethereum, Solana, Base, Arbitrum and shows a unified USD total.',ts:['tt','tg'],tn:['Multi-chain','Live']},
+{v:'What is my biggest position?',e:'Largest holding by USD value — instant answer with percentage of total portfolio.',ts:['tt','tg'],tn:['Alchemy','Instant']},
+{v:'How much ETH do I hold across all chains?',e:'Cross-chain aggregation — sums ETH, WETH, and bridged ETH across every chain you hold assets on.',ts:['tt','tg'],tn:['All chains','Alchemy']},
+{v:'What is my PnL this week?',e:'7-day performance — compares current portfolio value to exactly 7 days ago. Shows gain/loss per token.',ts:['tt','tg'],tn:['7-day','PnL']},
+{v:'Show me my all-time PnL',e:'Historical performance from your complete transaction history compared to current market prices.',ts:['ta','tg'],tn:['All-time','History']},
+{v:'Am I overexposed to one asset?',e:'Concentration risk check — flags if any single asset exceeds 40% of portfolio and suggests rebalancing options.',ts:['tt','tg'],tn:['Risk check','AI']},
+{v:'Show me my last 10 trades',e:'Transaction history — recent swaps with amounts, prices at time of trade, and PnL per trade.',ts:['tt','tg'],tn:['History','Alchemy']},
+{v:'How much have I spent on gas this month?',e:'Gas cost report — totals all transaction fees paid across every chain for the current calendar month.',ts:['tt','tg'],tn:['On-chain','Monthly']},
+{v:'Alert me if my portfolio drops 10%',e:'Drawdown alert — AI monitors total value and sends push notification if it falls below your threshold.',ts:['tt','tt'],tn:['Push Protocol','Alert']},
+{v:'What DeFi protocols am I exposed to?',e:'Protocol map — lists every lending position, LP position, and staking deposit across all protocols you use.',ts:['tt','tg'],tn:['Full map','On-chain']},
+{v:'Compare my portfolio to last month',e:'Month-over-month comparison — what changed: new positions, sold positions, and PnL delta.',ts:['ta','tg'],tn:['Comparison','Report']},
+]},
+{id:'intel',icon:'◈',col:'rgba(255,179,71,0.15)',lbl:'Intelligence',sub:'Real-time market context, smart money tracking, sentiment before every decision',svcs:['Perplexity','Nansen','LunarCrush','GoPlus','DeFiLlama'],cmds:[
+{v:'What is happening with ETH today?',e:'Live market context via Perplexity — AI searches current news, social, and on-chain data for a real-time summary before you trade.',ts:['ta','tt'],tn:['Perplexity','Live']},
+{v:'Should I buy SOL right now?',e:'Multi-signal analysis — checks price momentum, sentiment (LunarCrush), smart money flow (Nansen), and live news.',ts:['ta','ta'],tn:['Nansen','LunarCrush']},
+{v:'What are smart money wallets buying this week?',e:'Nansen intel — shows which tokens institutional wallets and known profitable traders are accumulating right now.',ts:['ta','ta'],tn:['Nansen','Whales']},
+{v:'What is the social sentiment on BTC?',e:'LunarCrush sentiment score — bullish/bearish rating from millions of social posts with 24-hour trend direction.',ts:['tt','ta'],tn:['LunarCrush','Sentiment']},
+{v:'Is this token contract safe to interact with?',e:'Security scan via GoPlus — checks audit status, owner permissions, honeypot risk, and rug pull indicators.',ts:['ta','tt'],tn:['GoPlus','Security']},
+{v:'What is the fear and greed index today?',e:'Market sentiment score with AI interpretation — what does the current reading mean for your specific open positions?',ts:['tt','tg'],tn:['F&G Index','Context']},
+{v:'Which tokens are trending right now?',e:'Trending scanner — combination of on-chain volume spikes, social mention growth, and price momentum signals.',ts:['tt','ta'],tn:['LunarCrush','On-chain']},
+{v:'Alert me when a whale buys $1M of ETH',e:'Whale alert via Nansen — monitors large transactions and sends push notification when your threshold is crossed.',ts:['ta','tt'],tn:['Nansen','Alert']},
+{v:'What is the TVL of Aave right now?',e:'Protocol health check via DeFiLlama — TVL, 24-hour change, and comparison to the historical peak.',ts:['tt','tg'],tn:['DeFiLlama','TVL']},
+{v:'Give me a DeFi market summary this week',e:'Weekly digest via Perplexity — protocol launches, exploits, governance votes, and major volume shifts.',ts:['ta','ta'],tn:['Perplexity','Weekly']},
+{v:'Which wallets are accumulating SOL?',e:'Accumulation intel via Nansen — addresses consistently buying SOL over the last 7 days.',ts:['ta','ta'],tn:['Nansen','Accumulation']},
+]},
+{id:'payments',icon:'→',col:'rgba(0,201,167,0.12)',lbl:'Payments',sub:'Send money anywhere — private, cross-border, batch, or recurring',svcs:['ENS','GhostPay','LI.FI','Gelato'],cmds:[
+{v:'Send 0.1 ETH to hassan.eth',e:'ENS payment — resolves the ENS name to wallet address and confirms recipient clearly before broadcasting.',ts:['tt','tg'],tn:['ENS','Simple']},
+{v:'Pay 50 USDC to 0x...',e:'Direct stablecoin transfer — clean ERC-20 send with gas estimate and one-click confirmation.',ts:['tt','tg'],tn:['ERC-20','Transfer']},
+{v:'Send money to Argentina in USDC',e:'Cross-border payment — routes USDC via cheapest bridge to recipient\'s preferred chain, bypassing forex completely.',ts:['tt','tt'],tn:['LI.FI','Cross-border']},
+{v:'Split $300 between 3 wallets equally',e:'Multi-send batch — sends equal shares to multiple addresses in one gas-efficient transaction.',ts:['tt','ta'],tn:['Batch','Gas efficient']},
+{v:'Set up a recurring payment of $100 monthly',e:'Subscription payment — Gelato handles recurring on-chain payments automatically on your chosen schedule.',ts:['tp','ta'],tn:['Gelato','Recurring']},
+{v:'Send anonymous payroll to my team',e:'Private team payroll — GhostPay routes each salary privately so staff cannot see each other\'s compensation.',ts:['tp','tp'],tn:['GhostPay','Private']},
+{v:'Create a payment request link for 50 USDC',e:'Shareable payment link — generates a URL anyone can click to send you exactly 50 USDC without knowing your main address.',ts:['tt','tg'],tn:['Payment link','Simple']},
+{v:'Send ETH and auto-convert to USDC on arrival',e:'Swap-and-send — you send ETH, recipient automatically receives USDC. Cross-asset delivery in one action.',ts:['tt','tt'],tn:['1inch','LI.FI']},
+{v:'Pay multiple addresses from a CSV file',e:'Bulk payments — paste a list of addresses and amounts, AI queues all payments for a single wallet approval.',ts:['tp','ta'],tn:['Batch','CSV']},
+{v:'What did I spend on payments this month?',e:'Spending summary — all outgoing payments categorised and totalled with USD values at time of each transaction.',ts:['tt','tg'],tn:['Report','Monthly']},
+]},
+{id:'auto',icon:'⟳',col:'rgba(83,74,183,0.2)',lbl:'Automation',sub:'Strategies that run 24/7 while you sleep — bots, compounders, copy trading',svcs:['Gelato','Nansen','1inch','Alchemy'],cmds:[
+{v:'Run a grid bot on ETH between $3,000 and $4,000',e:'Grid trading bot via Gelato — sets buy/sell orders at regular intervals inside your range. Profits from volatility automatically.',ts:['tp','ta'],tn:['Gelato','Grid bot']},
+{v:'Auto-compound my yield every week',e:'Yield compounder — every 7 days AI claims interest from all protocols and reinvests it to compound returns automatically.',ts:['tt','ta'],tn:['Aave','Gelato']},
+{v:'Rebalance my portfolio every month automatically',e:'Monthly auto-rebalance — on the 1st of each month AI swaps back to your target allocations. Zero manual work.',ts:['tp','ta'],tn:['Gelato','Monthly']},
+{v:'If ETH drops 20%, automatically buy $500 more',e:'Dip buyer — conditional order triggers a market buy when ETH falls 20% from any recent high.',ts:['tp','ta'],tn:['Gelato','Dip buyer']},
+{v:'Move yield profits to my cold wallet weekly',e:'Auto-sweep — every Sunday AI moves yield earnings above $50 to your hardware wallet address.',ts:['tt','ta'],tn:['Gelato','Auto-sweep']},
+{v:'Copy trade this wallet address automatically',e:'Copy trading — AI monitors a target wallet and mirrors its trades proportionally on your account in real-time.',ts:['tp','ta'],tn:['Nansen','Gelato']},
+{v:'Pause all automation if portfolio drops 25%',e:'Circuit breaker — master safety switch that halts all active bots and orders if total value drops too far too fast.',ts:['tr','ta'],tn:['Safety stop','Gelato']},
+{v:'Buy $100 ETH whenever it drops 5% in a day',e:'Dip accumulation — recurring conditional buy triggered by daily percentage drops. Automates a common manual strategy.',ts:['tp','ta'],tn:['Gelato','Strategy']},
+{v:'Convert all incoming airdrops to ETH',e:'Airdrop converter — AI watches for new tokens arriving and auto-swaps them to ETH via 1inch.',ts:['tt','tt'],tn:['Alchemy','1inch']},
+{v:'Alert me if any of my tokens pump 30% in an hour',e:'Pump alert — monitors all holdings for abnormal price spikes and sends an immediate push notification.',ts:['tt','tt'],tn:['CoinGecko','Push']},
+]},
+{id:'tax',icon:'$',col:'rgba(255,179,71,0.12)',lbl:'Tax & reports',sub:'Every crypto user\'s biggest headache — solved with one command',svcs:['Koinly','Chainalysis','Alchemy'],cmds:[
+{v:'Generate my crypto tax report for 2025',e:'Full tax report via Koinly API — imports all transactions, calculates capital gains by jurisdiction, exports as PDF.',ts:['ta','ta'],tn:['Koinly','PDF report']},
+{v:'How much tax do I owe on my crypto profits?',e:'Capital gains estimate — AI calculates both realised and unrealised gains from your complete transaction history.',ts:['ta','ta'],tn:['Koinly','Estimate']},
+{v:'Export all my trades as a CSV',e:'Full transaction export — every trade with timestamps, amounts, prices at time, fees, and net PnL per trade.',ts:['tt','tg'],tn:['Export','CSV']},
+{v:'Which of my trades are taxable this year?',e:'Taxable events report — filters your full history to show only transactions that trigger a tax event.',ts:['ta','ta'],tn:['Koinly','Tax events']},
+{v:'What is my cost basis on my ETH?',e:'Cost basis calculation — weighted average or FIFO cost basis on your ETH across your entire purchase history.',ts:['ta','tg'],tn:['Koinly','Cost basis']},
+{v:'Show me tax-loss harvesting opportunities',e:'TLH scanner — identifies positions at a loss that you could sell to offset gains and reduce your tax bill.',ts:['ta','ta'],tn:['Koinly','TLH']},
+{v:'Generate proof of funds for my accountant',e:'Verifiable proof of funds document — cryptographically verified balance at a specific date and time.',ts:['ta','tt'],tn:['Alchemy','Proof']},
+{v:'Check if I am OFAC compliant',e:'Compliance scan — screens your wallet history for any interactions with OFAC-sanctioned addresses or protocols.',ts:['ta','tt'],tn:['Chainalysis','OFAC']},
+{v:'Monitor my wallet for suspicious activity',e:'Transaction monitoring — Chainalysis flags unusual outflows or interactions with risky or flagged contracts.',ts:['ta','tt'],tn:['Chainalysis','Monitor']},
+{v:'Prove this transaction to my accountant',e:'Transaction receipt — cryptographic proof with tx hash, block number, amounts, prices, and timestamp.',ts:['tt','tg'],tn:['On-chain','Receipt']},
+]},
+{id:'social',icon:'◉',col:'rgba(0,201,167,0.12)',lbl:'Social trading',sub:'Follow the smart money and build your own on-chain trading reputation',svcs:['Nansen','LunarCrush','Push Protocol','Alchemy'],cmds:[
+{v:'What is Vitalik\'s wallet buying?',e:'Named wallet tracker via Nansen — monitors publicly known wallets and shows recent on-chain activity in plain English.',ts:['ta','ta'],tn:['Nansen','Whale watch']},
+{v:'Show me the top performing traders this week',e:'Leaderboard — ranks wallets by PnL percentage over 7 days using live on-chain data from Nansen.',ts:['ta','ta'],tn:['Nansen','Leaderboard']},
+{v:'Copy trades from a top performing wallet',e:'Proportional copy trading — AI mirrors every trade from the target wallet on your account scaled to your size.',ts:['tp','ta'],tn:['Nansen','Copy trade']},
+{v:'Follow this wallet and alert me on every trade',e:'Wallet follow — push notification every time a specific address makes an on-chain move.',ts:['tt','tt'],tn:['Alchemy','Push']},
+{v:'Compare my performance to just holding ETH',e:'Benchmark — your actual trading PnL vs simply holding ETH from the same starting point.',ts:['tt','tg'],tn:['Benchmark','On-chain']},
+{v:'Share my trading stats publicly',e:'Public trading profile — shareable link with win rate, PnL, and top trades. Wallet address not revealed.',ts:['tt','tg'],tn:['Public stats','Private']},
+{v:'What are traders saying about SOL on social?',e:'LunarCrush social consensus — aggregates Twitter/X, Reddit, Telegram sentiment on any token in real-time.',ts:['tt','ta'],tn:['LunarCrush','Social']},
+{v:'Find wallets with a strategy similar to mine',e:'Similar trader discovery via Nansen — finds wallets with comparable trading patterns and asset preferences.',ts:['ta','ta'],tn:['Nansen','Discovery']},
+]},
+{id:'nft',icon:'◻',col:'rgba(83,74,183,0.18)',lbl:'NFT & Web3',sub:'NFT trading, airdrop claiming, ENS registration and Web3 identity',svcs:['OpenSea','Blur','Alchemy','ENS'],cmds:[
+{v:'Buy the floor NFT from Pudgy Penguins',e:'NFT floor buy via OpenSea and Blur — AI finds the cheapest listed item in the collection and executes the purchase.',ts:['ta','ta'],tn:['OpenSea','Blur']},
+{v:'What are my NFTs worth right now?',e:'NFT portfolio valuation — checks current floor prices for every collection you hold across Ethereum and Solana.',ts:['tt','tt'],tn:['Alchemy','OpenSea']},
+{v:'Sell my NFT at the current floor price',e:'NFT listing — AI lists on OpenSea and Blur simultaneously at floor price for the fastest possible sale.',ts:['ta','ta'],tn:['OpenSea','Blur']},
+{v:'Alert me if this NFT collection floor drops below 3 ETH',e:'Floor price alert — monitors the collection 24/7 and notifies you when it crosses your target price.',ts:['tt','tt'],tn:['Push alert','24/7']},
+{v:'What airdrops am I eligible for?',e:'Airdrop scanner — checks your wallet against known eligibility lists across 50+ protocols automatically.',ts:['tt','ta'],tn:['Multi-protocol','Eligibility']},
+{v:'Claim my airdrop from this protocol',e:'Airdrop claim — AI checks eligibility, builds the claim transaction, and executes it for you.',ts:['tt','tg'],tn:['Auto-claim','Gas']},
+{v:'Register my ENS domain',e:'ENS registration — checks name availability, registers the .eth domain, and sets up the resolver in one flow.',ts:['tt','tg'],tn:['ENS','Register']},
+{v:'Show me my on-chain reputation score',e:'Web3 identity score — based on transaction count, protocol diversity, wallet age, and overall on-chain activity.',ts:['tt','tg'],tn:['Identity','On-chain']},
+]},
+];
+
+let cur='trading';
+
+function total(){return CATS.reduce((s,c)=>s+c.cmds.length,0)}
+
+function renderTabs(){
+  document.getElementById('tab-bar').innerHTML=CATS.map(c=>`
+    <div class="tab${c.id===cur?' on':''}" onclick="go('${c.id}',this)">
+      ${c.icon} ${c.lbl} <span class="tab-c">${c.cmds.length}</span>
+    </div>`).join('');
+}
+
+function renderCat(id){
+  const c=CATS.find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById('content').innerHTML=`
+    <div class="cat-hdr">
+      <div class="cat-ico" style="background:${c.col}">${c.icon}</div>
+      <div>
+        <div class="cat-t">${c.lbl}</div>
+        <div class="cat-s">${c.sub}</div>
+        <div class="cat-meta">
+          <span class="cmeta">${c.cmds.length} commands</span>
+          ${c.svcs.map(s=>`<span class="cmeta">${s}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="grid">${c.cmds.map(renderCmd).join('')}</div>`;
+}
+
+function renderCmd(c){
+  return`<div class="cmd">
+    <div class="cmd-v">${c.v}</div>
+    <div class="cmd-e">${c.e}</div>
+    <div class="cmd-tags">${(c.ts||[]).map((t,i)=>`<span class="t ${t}">${c.tn?.[i]||''}</span>`).join('')}</div>
+  </div>`;
+}
+
+function go(id){
+  cur=id;
+  document.getElementById('srch').value='';
+  renderTabs();
+  renderCat(id);
+  document.querySelector('.content').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function doSearch(q){
+  q=q.trim().toLowerCase();
+  if(!q){renderTabs();renderCat(cur);return;}
+  const res=[];
+  CATS.forEach(cat=>cat.cmds.forEach(cmd=>{
+    if(cmd.v.toLowerCase().includes(q)||cmd.e.toLowerCase().includes(q)||(cmd.tn||[]).join(' ').toLowerCase().includes(q))
+      res.push({...cmd,_cat:cat.lbl,_icon:cat.icon});
+  }));
+  document.getElementById('tab-bar').innerHTML='';
+  if(!res.length){
+    document.getElementById('content').innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--gray)"><div style="font-size:28px;margin-bottom:10px">◌</div><div style="font-size:15px">No results for "<span style="color:var(--white)">${q}</span>"</div></div>`;
+    return;
+  }
+  document.getElementById('content').innerHTML=`
+    <div class="cat-hdr">
+      <div class="cat-ico" style="background:rgba(83,74,183,0.2)">⌕</div>
+      <div><div class="cat-t">Search results</div><div class="cat-s">${res.length} commands matching "<strong>${q}</strong>"</div></div>
+    </div>
+    <div class="grid">${res.map(c=>`
+      <div class="cmd">
+        <div style="font-size:10px;color:var(--gray);margin-bottom:5px">${c._icon} ${c._cat}</div>
+        <div class="cmd-v">${c.v}</div>
+        <div class="cmd-e">${c.e}</div>
+        <div class="cmd-tags">${(c.ts||[]).map((t,i)=>`<span class="t ${t}">${c.tn?.[i]||''}</span>`).join('')}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+const t=total();
+document.getElementById('nav-count').textContent=t+' commands';
+document.getElementById('total-n').textContent=t;
+renderTabs();
+renderCat('trading');
+</script>
+</body>
+</html>

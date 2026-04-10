@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(export PATH=\"/usr/local/bin:$PATH\")",
+      "Bash(npm install:*)"
+    ]
+  }
+}

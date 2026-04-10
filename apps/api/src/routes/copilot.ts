@@ -1,0 +1,266 @@
+import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import { parseIntent } from '../services/ai';
+import type { CopilotResponse } from '@defi-copilot/shared';
+import { findOrCreateUser, findOrCreateConversation, addMessage } from '../db';
+import { 
+  getJupiterQuote, 
+  getTokenAddress, 
+  solToLamports, 
+  lamportsToSol,
+  baseUnitsToUsdc,
+  usdcToBaseUnits
+} from '../services/jupiter';
+
+const CopilotBodySchema = z.object({
+  message: z.string().min(1).max(2000),
+  walletAddress: z.string().min(1),
+  chain: z.enum(['ethereum', 'base', 'arbitrum', 'polygon', 'solana']),
+  conversationId: z.string().optional(),
+});
+
+const SwapExecuteSchema = z.object({
+  quoteData: z.any(),
+  userPublicKey: z.string(),
+});
+
+const RealSwapSchema = z.object({
+  tokenIn: z.string(),
+  tokenOut: z.string(),
+  amountIn: z.string(),
+  userPublicKey: z.string(),
+});
+
+export const copilotRoutes: FastifyPluginAsync = async (app) => {
+  // Real swap endpoint (CORS proxy for Jupiter)
+  app.post<{ Body: z.infer<typeof RealSwapSchema> }>(
+    '/swap/real',
+    async (req, reply) => {
+      const parsed = RealSwapSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { tokenIn, tokenOut, amountIn, userPublicKey } = parsed.data;
+
+      try {
+        console.log(`🔥 Building REAL swap: ${amountIn} ${tokenIn} -> ${tokenOut}`);
+        
+        const axios = (await import('axios')).default;
+        
+        const TOKEN_MINTS: Record<string, string> = {
+          SOL: 'So11111111111111111111111111111111111111112',
+          USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        };
+
+        const inputMint = TOKEN_MINTS[tokenIn.toUpperCase()];
+        const outputMint = TOKEN_MINTS[tokenOut.toUpperCase()];
+        const amount = Math.floor(parseFloat(amountIn) * 1e9);
+
+        // Use Helius DAS API for swaps (you already have access!)
+        const HELIUS_API_KEY = process.env.HELIUS_API_KEY || 'ecb08fab-1799-46af-b0e9-4f324367d2bb';
+        
+        console.log('📡 Using Helius + Jupiter integration...');
+
+        // Call Jupiter through Helius RPC
+        const heliusRpcUrl = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+        
+        // Make RPC call to get swap transaction
+        const swapRequest = await axios.post(
+          heliusRpcUrl,
+          {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getSwapTransaction',
+            params: [{
+              userPublicKey,
+              inputMint,
+              outputMint,
+              amount,
+              slippageBps: 50,
+            }],
+          },
+          {
+            timeout: 30000,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+
+        if (swapRequest.data.result) {
+          console.log('✅ REAL swap transaction from Helius!');
+          return reply.send({
+            swapTransaction: swapRequest.data.result.transaction,
+            lastValidBlockHeight: swapRequest.data.result.lastValidBlockHeight,
+          });
+        }
+
+        throw new Error('No swap transaction returned from Helius');
+      } catch (error: any) {
+        console.error('❌ Helius swap error:', error.message);
+        if (error.response?.data) {
+          console.error('Helius response:', JSON.stringify(error.response.data));
+        }
+        
+        // Since Jupiter/Helius won't work, build manual Raydium swap
+        console.log('⚠️ Building manual Raydium swap...');
+        const { buildRaydiumSwap } = await import('../services/raydiumSwap');
+        
+        const transaction = await buildRaydiumSwap(
+          userPublicKey,
+          tokenIn,
+          tokenOut,
+          parseFloat(amountIn)
+        );
+
+        return reply.send(transaction);
+      }
+    }
+  );
+
+  // Get swap transaction  
+  app.post<{ Body: z.infer<typeof SwapExecuteSchema> }>(
+    '/swap/transaction',
+    async (req, reply) => {
+      const parsed = SwapExecuteSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { quoteData, userPublicKey } = parsed.data;
+
+      // Use direct swap (no Jupiter API needed)
+      try {
+        console.log('Received swap request:', JSON.stringify({ quoteData, userPublicKey }, null, 2));
+        
+        const { buildDirectSwapTransaction } = await import('../services/directSwap');
+        
+        // Extract swap details from quoteData (which is the enriched intent)
+        const tokenIn = quoteData?.tokenIn || quoteData?.inputMint || 'SOL';
+        const tokenOut = quoteData?.tokenOut || quoteData?.outputMint || 'USDC';
+        const amountIn = parseFloat(quoteData?.amountIn || quoteData?.inputAmount || '0.01');
+        
+        console.log(`Building swap: ${amountIn} ${tokenIn} -> ${tokenOut}`);
+        
+        const transaction = await buildDirectSwapTransaction(
+          userPublicKey,
+          tokenIn,
+          tokenOut,
+          amountIn
+        );
+        
+        return reply.send(transaction);
+      } catch (error: any) {
+        console.error('Failed to get swap transaction:', error);
+        console.error('Error stack:', error.stack);
+        return reply.status(500).send({ error: `Failed to build swap transaction: ${error.message}` });
+      }
+    }
+  );
+
+  app.post<{ Body: z.infer<typeof CopilotBodySchema> }>(
+    '/copilot',
+    async (req, reply) => {
+      const parsed = CopilotBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { message, walletAddress, chain, conversationId } = parsed.data;
+
+      // TODO: Enable database when ready
+      // const user = await findOrCreateUser(walletAddress, chain);
+      // const conversation = await findOrCreateConversation(user.id, walletAddress, chain, conversationId);
+      // await addMessage(conversation.id, 'user', message);
+
+      // Try AI first, fallback to pattern matching if no credits
+      let aiReply: string;
+      let intent: any;
+      
+      try {
+        const result = await parseIntent({
+          message,
+          walletAddress,
+          chain,
+        });
+        aiReply = result.reply;
+        intent = result.intent;
+      } catch (error) {
+        console.log('AI API failed, using fallback pattern matching');
+        
+        // Fallback: Simple pattern matching for swaps
+        const swapMatch = message.match(/swap\s+([\d.]+)\s+(\w+)\s+to\s+(\w+)/i);
+        if (swapMatch) {
+          const [, amount, tokenIn, tokenOut] = swapMatch;
+          intent = {
+            action: 'swap',
+            tokenIn: tokenIn.toUpperCase(),
+            tokenOut: tokenOut.toUpperCase(),
+            amountIn: amount,
+            chain: chain,
+            slippageTolerance: 0.5,
+            clarificationNeeded: false,
+          };
+          aiReply = `I'll swap ${amount} ${tokenIn.toUpperCase()} to ${tokenOut.toUpperCase()}. Please confirm.`;
+        } else {
+          aiReply = `I understand you want to: "${message}". Please add credits to OpenAI to enable full AI features!`;
+          intent = null;
+        }
+      }
+
+      // await addMessage(conversation.id, 'assistant', aiReply, intent);
+
+      // If it's a swap on Solana, get direct swap quote
+      let enrichedIntent = intent;
+      if (
+        intent &&
+        intent.action === 'swap' &&
+        chain === 'solana' &&
+        !intent.clarificationNeeded &&
+        intent.tokenIn &&
+        intent.tokenOut
+      ) {
+        try {
+          const { getDirectSwapQuote } = await import('../services/directSwap');
+          
+          // Get amount in human-readable format
+          const amountIn = intent.amountIn ? parseFloat(intent.amountIn) : 0.01;
+          
+          const quote = await getDirectSwapQuote(
+            intent.tokenIn,
+            intent.tokenOut,
+            amountIn
+          );
+
+          // Output amount is already in human-readable format
+          const outAmount = quote.outputAmount;
+
+          enrichedIntent = {
+            ...intent,
+            quoteData: {
+              ...quote,
+              tokenIn: intent.tokenIn,
+              tokenOut: intent.tokenOut,
+              amountIn: intent.amountIn || amountIn.toString(),
+            },
+            estimatedOutput: outAmount,
+          };
+        } catch (error) {
+          console.error('Failed to get swap quote:', error);
+          // Continue without quote data
+        }
+      }
+
+      const response: CopilotResponse = {
+        reply: aiReply,
+        intent: enrichedIntent,
+        requiresConfirmation: enrichedIntent
+          ? ['swap', 'limit', 'stop_loss', 'dca', 'bridge'].includes(enrichedIntent.action) &&
+            !enrichedIntent.clarificationNeeded
+          : false,
+        conversationId: conversationId || `temp-${Date.now()}`, // Temporary ID
+      };
+
+      return reply.send(response);
+    }
+  );
+};

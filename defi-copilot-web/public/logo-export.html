@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Copilot Logo Export</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #2B2520;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #E8D5C4;
+    }
+    .logo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    canvas {
+      border: 2px solid #463E37;
+      border-radius: 12px;
+    }
+    button {
+      padding: 12px 24px;
+      background: #D4764B;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #C96A42;
+    }
+    h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+    .sizes {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Copilot Logo Export</h1>
+  <p>Right-click on any logo to save as PNG</p>
+  
+  <div class="sizes">
+    <div class="logo-container">
+      <canvas id="logo-512" width="512" height="512"></canvas>
+      <button onclick="downloadLogo('logo-512', 512)">Download 512x512</button>
+    </div>
+    
+    <div class="logo-container">
+      <canvas id="logo-256" width="256" height="256"></canvas>
+      <button onclick="downloadLogo('logo-256', 256)">Download 256x256</button>
+    </div>
+    
+    <div class="logo-container">
+      <canvas id="logo-128" width="128" height="128"></canvas>
+      <button onclick="downloadLogo('logo-128', 128)">Download 128x128</button>
+    </div>
+    
+    <div class="logo-container">
+      <canvas id="logo-64" width="64" height="64"></canvas>
+      <button onclick="downloadLogo('logo-64', 64)">Download 64x64</button>
+    </div>
+  </div>
+
+  <script>
+    function drawLogo(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      const scale = size / 200;
+      
+      ctx.clearRect(0, 0, size, size);
+      ctx.scale(scale, scale);
+      
+      // Create gradient
+      const gradient = ctx.createLinearGradient(0, 0, 200, 200);
+      gradient.addColorStop(0, '#E8744F');
+      gradient.addColorStop(0.5, '#D4764B');
+      gradient.addColorStop(1, '#C96A42');
+      
+      // Main circle
+      ctx.beginPath();
+      ctx.arc(100, 100, 90, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.95;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      
+      // Navigation points
+      ctx.fillStyle = 'white';
+      
+      // North (brighter)
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(100, 30);
+      ctx.lineTo(110, 60);
+      ctx.lineTo(100, 55);
+      ctx.lineTo(90, 60);
+      ctx.closePath();
+      ctx.fill();
+      
+      // East
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(170, 100);
+      ctx.lineTo(140, 110);
+      ctx.lineTo(145, 100);
+      ctx.lineTo(140, 90);
+      ctx.closePath();
+      ctx.fill();
+      
+      // South
+      ctx.beginPath();
+      ctx.moveTo(100, 170);
+      ctx.lineTo(110, 140);
+      ctx.lineTo(100, 145);
+      ctx.lineTo(90, 140);
+      ctx.closePath();
+      ctx.fill();
+      
+      // West
+      ctx.beginPath();
+      ctx.moveTo(30, 100);
+      ctx.lineTo(60, 110);
+      ctx.lineTo(55, 100);
+      ctx.lineTo(60, 90);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Center connections
+      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(100, 88);
+      ctx.lineTo(100, 50);
+      ctx.stroke();
+      
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.moveTo(112, 100);
+      ctx.lineTo(145, 100);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(100, 112);
+      ctx.lineTo(100, 145);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(88, 100);
+      ctx.lineTo(55, 100);
+      ctx.stroke();
+      
+      // Nodes
+      ctx.fillStyle = 'white';
+      
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath();
+      ctx.arc(100, 100, 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.arc(100, 50, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(145, 100, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(100, 145, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(55, 100, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Orbital rings
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.arc(100, 100, 75, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.1;
+      ctx.beginPath();
+      ctx.arc(100, 100, 60, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    function downloadLogo(canvasId, size) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = `copilot-logo-${size}x${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    
+    // Draw all logos on load
+    window.onload = () => {
+      drawLogo(document.getElementById('logo-512'), 512);
+      drawLogo(document.getElementById('logo-256'), 256);
+      drawLogo(document.getElementById('logo-128'), 128);
+      drawLogo(document.getElementById('logo-64'), 64);
+    };
+  </script>
+</body>
+</html>
