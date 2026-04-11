@@ -24,7 +24,7 @@ export function ChatHistory({ onNavigate, currentSection = 'chats', onClearHisto
       {/* Logo */}
       <div className="p-4 flex items-center gap-3">
         <CopilotLogoSmall size={32} />
-        <span className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>Copilot</span>
+        <span className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>DeFi Copilot</span>
       </div>
 
       {/* New Chat Button */}
