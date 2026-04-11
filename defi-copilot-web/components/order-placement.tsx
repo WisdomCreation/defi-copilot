@@ -62,9 +62,21 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
 
       const inputMint = TOKEN_MINTS[intent.tokenIn?.toUpperCase() || 'USDC']
       const outputMint = TOKEN_MINTS[intent.tokenOut?.toUpperCase() || 'SOL']
-      const amount = Math.floor(parseFloat(intent.amountIn || intent.amountUsd || '0') * 1e6)
+      
+      // Get correct decimals for input token
+      const inputToken = intent.tokenIn?.toUpperCase() || 'USDC'
+      const decimals = inputToken === 'SOL' ? 9 : 6 // SOL=9, USDC/USDT=6
+      const amountValue = parseFloat(intent.amountIn || intent.amountUsd || '0')
+      const amount = Math.floor(amountValue * Math.pow(10, decimals))
 
-      console.log('Building order transaction...', { inputMint, outputMint, amount })
+      console.log('Building order transaction...', { 
+        inputMint, 
+        outputMint, 
+        amount, 
+        amountValue,
+        decimals,
+        inputToken
+      })
 
       // Get Jupiter quote
       const quote = await jupiterApi.quoteGet({
