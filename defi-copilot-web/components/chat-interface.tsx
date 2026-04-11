@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Send, Loader2, X } from 'lucide-react'
+import { Send, Loader2, X, UserPlus, Trash2, Edit2, Check } from 'lucide-react'
 import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
 import { CopilotLogo } from './logo'
+import { getContacts, saveContact, deleteContact, resolveContact, resolveContacts, type Contact } from '../hooks/useContacts'
 
 function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: string }) {
   const qr = intent?.queryResult
@@ -347,6 +348,11 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
     )
   }
 
+  // ── Contact cards ────────────────────────────────────────────────────────
+  if (qr.type === 'contact_action') {
+    return <ContactActionCard qr={qr} userAddress={userAddress} />
+  }
+
   // OFAC check
   if (qr.type === 'ofac_check') {
     return (
@@ -367,6 +373,135 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
   }
 
   return null
+}
+
+function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string }) {
+  const [contacts, setContacts] = useState<Contact[]>(() => userAddress ? getContacts(userAddress) : [])
+  const [editName, setEditName] = useState('')
+  const [editAddr, setEditAddr] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+
+  // Execute save/edit/delete immediately on mount
+  useEffect(() => {
+    if (!userAddress) return
+    if ((qr.queryType === 'save' || qr.queryType === 'edit') && qr.contactName && qr.contactAddress) {
+      const updated = saveContact(userAddress, qr.contactName, qr.contactAddress)
+      setContacts(updated)
+      setSaved(true)
+    } else if (qr.queryType === 'delete' && qr.contactName) {
+      const updated = deleteContact(userAddress, qr.contactName)
+      setContacts(updated)
+      setDeleted(true)
+    } else {
+      setContacts(getContacts(userAddress))
+    }
+  }, [])
+
+  // Save / edit form
+  if (qr.queryType === 'save' || qr.queryType === 'edit') {
+    if (!qr.contactName || !qr.contactAddress) {
+      // Missing info — show inline form
+      return (
+        <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+          <div className="px-3 py-2" style={{ backgroundColor: 'var(--background)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Save Contact</span>
+          </div>
+          <div className="px-3 py-2 space-y-2">
+            <input
+              className="w-full rounded px-2 py-1.5 text-xs focus:outline-none"
+              style={{ backgroundColor: 'var(--hover)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+              placeholder="Name (e.g. hassan)"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+            />
+            <input
+              className="w-full rounded px-2 py-1.5 text-xs focus:outline-none font-mono"
+              style={{ backgroundColor: 'var(--hover)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+              placeholder="Wallet address"
+              value={editAddr}
+              onChange={e => setEditAddr(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                if (!userAddress || !editName || !editAddr) return
+                const updated = saveContact(userAddress, editName, editAddr)
+                setContacts(updated)
+                setSaved(true)
+              }}
+              className="w-full py-1.5 rounded text-xs font-semibold flex items-center justify-center gap-1"
+              style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}
+            >
+              <UserPlus className="w-3 h-3" /> Save Contact
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div className="mt-3 p-3 rounded-lg flex items-center gap-2 text-xs"
+        style={{ backgroundColor: saved ? 'rgba(0,201,167,0.08)' : 'var(--background)', border: `1px solid ${saved ? 'rgba(0,201,167,0.3)' : 'var(--border)'}` }}>
+        {saved
+          ? <><Check className="w-3 h-3" style={{ color: '#00C9A7' }} /><span style={{ color: '#00C9A7' }}>Saved <strong>{qr.contactName}</strong> → {qr.contactAddress?.slice(0, 12)}...</span></>
+          : <><Loader2 className="w-3 h-3 animate-spin" /><span style={{ color: '#999' }}>Saving...</span></>
+        }
+      </div>
+    )
+  }
+
+  // Delete
+  if (qr.queryType === 'delete') {
+    return (
+      <div className="mt-3 p-3 rounded-lg flex items-center gap-2 text-xs"
+        style={{ backgroundColor: deleted ? 'rgba(255,107,107,0.06)' : 'var(--background)', border: `1px solid ${deleted ? 'rgba(255,107,107,0.3)' : 'var(--border)'}` }}>
+        {deleted
+          ? <><Trash2 className="w-3 h-3" style={{ color: '#FF6B6B' }} /><span style={{ color: '#FF6B6B' }}><strong>{qr.contactName}</strong> removed from contacts.</span></>
+          : <><Loader2 className="w-3 h-3 animate-spin" /><span style={{ color: '#999' }}>Removing...</span></>
+        }
+      </div>
+    )
+  }
+
+  // Lookup
+  if (qr.queryType === 'lookup') {
+    const found = contacts.find(c => c.name === qr.contactName?.toLowerCase())
+    return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+        {found
+          ? <div><div className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{found.displayName}</div><div className="font-mono" style={{ color: '#7B70FF' }}>{found.address}</div></div>
+          : <span style={{ color: '#999' }}>No contact found for &quot;{qr.contactName}&quot;.</span>
+        }
+      </div>
+    )
+  }
+
+  // List contacts
+  return (
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+        <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>My Contacts</span>
+        <span className="text-xs" style={{ color: '#999' }}>{contacts.length} saved</span>
+      </div>
+      {contacts.length === 0 && (
+        <div className="px-3 py-3 text-xs" style={{ color: '#999' }}>No contacts saved yet. Try &quot;save this address as hassan: &lt;address&gt;&quot;</div>
+      )}
+      {contacts.map((c, i) => (
+        <div key={i} className="px-3 py-2 flex items-center justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+          <div>
+            <div className="font-semibold" style={{ color: 'var(--foreground)' }}>{c.displayName}</div>
+            <div className="font-mono text-xs truncate max-w-[180px]" style={{ color: '#7B70FF' }}>{c.address}</div>
+          </div>
+          <button
+            onClick={() => { if (userAddress) { deleteContact(userAddress, c.displayName); setContacts(getContacts(userAddress)) } }}
+            className="p-1 rounded opacity-50 hover:opacity-100"
+            title="Remove"
+          >
+            <Trash2 className="w-3 h-3" style={{ color: '#FF6B6B' }} />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function PaymentConfirmCard({ qr, fromWallet }: { qr: any; fromWallet?: string }) {
@@ -626,6 +761,27 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
       }
 
       const data = await response.json()
+
+      // ── Resolve contact names in payment intents ───────────────────────
+      if (data.intent?.action === 'payment' && address) {
+        const intent = data.intent
+        if (intent.recipient) {
+          intent.recipient = resolveContact(address, intent.recipient)
+        }
+        if (intent.recipients?.length) {
+          const resolved = resolveContacts(address, intent.recipients)
+          intent.recipients = resolved.map(r => r.address)
+          // Rebuild queryResult with resolved addresses if it exists
+          if (intent.queryResult?.recipients) {
+            intent.queryResult.recipients = intent.queryResult.recipients.map((r: any, i: number) => ({
+              ...r,
+              address: resolved[i]?.address || r.address,
+              displayName: resolved[i]?.displayName || resolved[i]?.input || r.address,
+            }))
+          }
+        }
+        data.intent = intent
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),

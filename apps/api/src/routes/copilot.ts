@@ -285,6 +285,17 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
           : `No ${token} yield pools found above $500k TVL right now.`;
       }
 
+      // ── Contact handler (client-side storage, just echo intent back) ────
+      if (intent?.action === 'contact') {
+        const qt = intent.queryType || 'list';
+        enrichedIntent = { ...intent, queryResult: { type: 'contact_action', queryType: qt, contactName: intent.contactName, contactAddress: intent.contactAddress } };
+        if (qt === 'save') aiReply = intent.contactName && intent.contactAddress ? `Saving ${intent.contactName} to your contacts.` : 'Please provide both a name and address.';
+        else if (qt === 'edit') aiReply = `Updating ${intent.contactName}'s address.`;
+        else if (qt === 'delete') aiReply = `Removing ${intent.contactName} from your contacts.`;
+        else if (qt === 'lookup') aiReply = `Looking up ${intent.contactName} in your contacts.`;
+        else aiReply = 'Here are your saved contacts.';
+      }
+
       // ── Payment handler ──────────────────────────────────────────────────
       if (intent?.action === 'payment') {
         const qt = intent.queryType || 'direct';
