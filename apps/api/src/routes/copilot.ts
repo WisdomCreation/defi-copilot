@@ -7,7 +7,7 @@ import { prisma } from '../db/prisma';
 import { handlePortfolioQuery, handleMarketQuery, handleYieldQuery, handleTransactionHistory } from '../services/queryHandlers';
 import { handleTaxReport, handleCapitalGains, handleExportCSV, handleTaxLossHarvesting, handleProofOfFunds, handleOFACCheck } from '../services/taxHandlers';
 import { buildPaymentPreview, buildBatchPaymentPreview, buildPaymentLink, buildSpendingSummary } from '../services/paymentHandlers';
-import { getPrivacyRoutes, generateStealthAddress, screenWallet } from '../services/privacyHandlers';
+import { getPrivacyRoutes, generateStealthAddress, screenWallet, initiateGhostPaySend, initiateHoudiniSend } from '../services/privacyHandlers';
 import { 
   getJupiterQuote, 
   getTokenAddress, 
@@ -303,28 +303,50 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
             : `⚠ Risk detected on ${target.slice(0, 8)}... — ${queryResult.flags.length} flags found.`;
 
         } else {
-          // send / swap / compare — fetch all provider quotes
           const token = intent.tokenIn || 'SOL';
           const tokenOut = intent.tokenOut || token;
           const amount = parseFloat(intent.amountIn || intent.amountUsd || '0') || 1;
           const autoSelect = intent.autoSelect || 'lowest_fee';
-          const preferred = intent.preferredProvider || null;
-          queryResult = await getPrivacyRoutes({
-            tokenIn: token,
-            tokenOut,
-            amount,
-            recipient: intent.recipient,
-            autoSelect: preferred ? undefined : autoSelect as any,
-          });
-          // If user specified a provider, mark it as recommended
-          if (preferred) {
-            queryResult.providers = queryResult.providers.map((p: any) => ({ ...p, recommended: p.provider.toLowerCase().includes(preferred.toLowerCase()) }));
-            queryResult.recommended = preferred;
+          const preferred = (intent.preferredProvider || '').toLowerCase();
+          const recipient = intent.recipient || '';
+
+          // If user has a specific provider AND recipient — initiate directly
+          if (preferred && recipient && (preferred.includes('ghostpay') || preferred.includes('ghost'))) {
+            try {
+              queryResult = await initiateGhostPaySend({
+                fromToken: token, toToken: tokenOut, amount,
+                payerAddress: walletAddress, receiverAddress: recipient,
+              });
+              aiReply = `GhostPay send initiated! Send ${queryResult.amountIn} ${queryResult.tokenIn} to the deposit address shown. Your wallet will be completely unlinked from ${recipient.slice(0,8)}...`;
+            } catch (e: any) {
+              aiReply = `GhostPay error: ${e.message}. Showing all routes instead.`;
+              queryResult = await getPrivacyRoutes({ tokenIn: token, tokenOut, amount, recipient, autoSelect: 'lowest_fee' });
+            }
+          } else if (preferred && recipient && preferred.includes('houdini')) {
+            try {
+              queryResult = await initiateHoudiniSend({
+                fromToken: token, toToken: tokenOut, amount, receiverAddress: recipient,
+              });
+              aiReply = `Houdini exchange created! Send ${queryResult.amountIn} ${queryResult.tokenIn} to the deposit address shown. Anonymous routing is active.`;
+            } catch (e: any) {
+              aiReply = `Houdini error: ${e.message}. Showing all routes instead.`;
+              queryResult = await getPrivacyRoutes({ tokenIn: token, tokenOut, amount, recipient, autoSelect: 'lowest_fee' });
+            }
+          } else {
+            // Compare all providers
+            queryResult = await getPrivacyRoutes({
+              tokenIn: token, tokenOut, amount, recipient,
+              autoSelect: preferred ? undefined : autoSelect as any,
+            });
+            if (preferred) {
+              queryResult.providers = queryResult.providers.map((p: any) => ({ ...p, recommended: p.provider.toLowerCase().includes(preferred) }));
+              queryResult.recommended = preferred;
+            }
+            const rec = queryResult.providers.find((p: any) => p.recommended);
+            aiReply = preferred
+              ? `Routing ${amount} ${token} through ${preferred} — click “Send via this provider” to initiate.`
+              : `Found ${queryResult.providers.length} privacy routes. Lowest fee: ${rec?.provider} (${rec?.feePct}%). Click a row to send — no redirect needed for GhostPay and Houdini.`;
           }
-          const rec = queryResult.providers.find((p: any) => p.recommended);
-          aiReply = preferred
-            ? `Routing ${amount} ${token} through ${preferred} — fee: ${rec?.feeUsd} ${token}, ETA: ${rec?.estimatedTime}.`
-            : `Found ${queryResult.providers.length} privacy routes. Lowest fee: ${rec?.provider} (${rec?.feePct}% — $${rec?.feeUsd}).`;
         }
 
         enrichedIntent = { ...intent, queryResult };

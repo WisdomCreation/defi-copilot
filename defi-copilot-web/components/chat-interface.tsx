@@ -376,6 +376,10 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
     return <PrivacyRouteCard qr={qr} intent={intent} userAddress={userAddress} />
   }
 
+  if (qr.type === 'privacy_send_ready') {
+    return <PrivacySendReadyCard qr={qr} userAddress={userAddress} />
+  }
+
   if (qr.type === 'stealth_address') {
     return (
       <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.3)' }}>
@@ -442,14 +446,127 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
 
 const PRIVACY_LEVEL_COLOR: Record<string, string> = { Maximum: '#FF6B6B', High: '#FFB347', Medium: '#7B70FF' }
 
+function PrivacySendReadyCard({ qr, userAddress }: { qr: any; userAddress?: string }) {
+  const [sending, setSending] = useState(false)
+  const [done, setDone] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(qr.depositAddress)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSend = async () => {
+    if (!userAddress || !qr.depositAddress) return
+    setSending(true)
+    try {
+      const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
+      const phantom = (window as any).phantom?.solana
+      if (!phantom?.isConnected) await phantom.connect()
+      const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com')
+      const from = new PublicKey(userAddress)
+      const to = new PublicKey(qr.depositAddress)
+      const { blockhash } = await connection.getLatestBlockhash()
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: from })
+      tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: Math.round(qr.amountIn * LAMPORTS_PER_SOL) }))
+      const signed = await phantom.signTransaction(tx)
+      const sig = await connection.sendRawTransaction(signed.serialize())
+      setDone(sig)
+    } catch (e: any) {
+      alert(`Send failed: ${e.message}`)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (done) return (
+    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
+      <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Sent to {qr.provider}!</div>
+      <div style={{ color: '#999' }} className="mb-1">Private routing in progress — ETA: {qr.eta}</div>
+      <a href={`https://solscan.io/tx/${done}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View deposit on Solscan →</a>
+    </div>
+  )
+
+  return (
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.4)' }}>
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(123,112,255,0.1)' }}>
+        <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>🔒 {qr.provider} — Private Send Ready</span>
+        <span className="text-xs" style={{ color: '#00C9A7' }}>ETA: {qr.eta}</span>
+      </div>
+      <div className="px-3 py-2 text-xs space-y-1.5" style={{ borderTop: '1px solid var(--border)' }}>
+        <div style={{ color: '#999' }}>{qr.instruction}</div>
+        <div className="flex justify-between pt-1"><span style={{ color: '#999' }}>You send</span><span style={{ color: '#FFB347' }}>{qr.amountIn} {qr.tokenIn}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Recipient gets</span><span style={{ color: '#00C9A7' }}>{qr.amountOut} {qr.tokenOut}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Expires</span><span style={{ color: 'var(--foreground)' }}>{qr.expires ? new Date(qr.expires).toLocaleTimeString() : 'N/A'}</span></div>
+      </div>
+      {/* Deposit address */}
+      <div className="px-3 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="text-xs" style={{ color: '#999' }}>Deposit address (send your funds here):</div>
+        <div className="flex items-center gap-2">
+          <div className="font-mono text-[10px] flex-1 p-1.5 rounded truncate" style={{ backgroundColor: 'var(--hover)', color: '#7B70FF' }}>
+            {qr.depositAddress}
+          </div>
+          <button onClick={handleCopy} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+            {copied ? '✓' : 'Copy'}
+          </button>
+        </div>
+      </div>
+      {/* Send button */}
+      <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+        <button onClick={handleSend} disabled={sending}
+          className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2"
+          style={{ backgroundColor: sending ? 'rgba(123,112,255,0.1)' : 'rgba(123,112,255,0.2)', color: '#7B70FF' }}>
+          {sending ? <><Loader2 className="w-3 h-3 animate-spin" />Sending via Phantom...</> : `Send ${qr.amountIn} ${qr.tokenIn} via Phantom →`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; userAddress?: string }) {
   const [selected, setSelected] = useState<string | null>(null)
+  const [initiating, setInitiating] = useState<string | null>(null)
+  const [directResult, setDirectResult] = useState<any>(null)
   const recipient = intent?.recipient ? resolveContact(userAddress || '', intent.recipient) : qr.recipient
 
-  const handleUse = (provider: any) => {
+  const handleUse = async (provider: any) => {
     setSelected(provider.provider)
+
+    // GhostPay and Houdini — call backend to initiate directly
+    if (provider.apiDirect && recipient && qr.amount) {
+      const pName = provider.provider.toLowerCase()
+      const providerKey = pName.includes('ghost') ? 'GhostPay' : pName.includes('houdini') ? 'Houdini Swap' : null
+      if (providerKey) {
+        setInitiating(provider.provider)
+        try {
+          const res = await fetch('/api/copilot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: `send ${qr.amount} ${qr.tokenIn} to ${recipient} privately via ${providerKey}`,
+              walletAddress: userAddress,
+              chain: 'solana',
+            }),
+          })
+          const data = await res.json()
+          if (data.intent?.queryResult?.type === 'privacy_send_ready') {
+            setDirectResult(data.intent.queryResult)
+          } else {
+            window.open(provider.url, '_blank')
+          }
+        } catch {
+          window.open(provider.url, '_blank')
+        } finally {
+          setInitiating(null)
+        }
+        return
+      }
+    }
     window.open(provider.url, '_blank')
   }
+
+  if (directResult) return <PrivacySendReadyCard qr={directResult} userAddress={userAddress} />
 
   return (
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
@@ -518,7 +635,10 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
           {/* ETA + button */}
           <div className="text-center">
             <div style={{ color: 'var(--foreground)' }}>{p.estimatedTime}</div>
-            <div style={{ color: '#7B70FF' }} className="text-[10px]">Use →</div>
+            {initiating === p.provider
+              ? <Loader2 className="w-3 h-3 animate-spin mx-auto mt-0.5" style={{ color: '#7B70FF' }} />
+              : <div style={{ color: p.apiDirect ? '#00C9A7' : '#7B70FF' }} className="text-[10px]">{p.apiDirect ? 'Direct ✓' : 'Open →'}</div>
+            }
           </div>
         </div>
       ))}
@@ -526,7 +646,7 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
       {/* Recommended summary */}
       {qr.recommended && (
         <div className="px-3 py-2 text-xs flex items-center gap-1" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
-          <span>System selected <strong style={{ color: '#00C9A7' }}>{qr.recommended}</strong> as best. Click any row to open the provider — you will sign there.</span>
+          <span>System selected <strong style={{ color: '#00C9A7' }}>{qr.recommended}</strong> as best. <strong style={{ color: '#00C9A7' }}>GhostPay</strong> and <strong style={{ color: '#00C9A7' }}>Houdini</strong> execute directly — no redirect. Railgun and Umbra open their apps.</span>
         </div>
       )}
     </div>
