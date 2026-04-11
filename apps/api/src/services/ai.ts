@@ -82,36 +82,46 @@ export async function parseIntent(params: ParseIntentParams): Promise<ParseInten
 
   const userContext = `Wallet: ${walletAddress}\nCurrent chain: ${chain}`;
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1024,
-    temperature: 0.3,
-    messages: [
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: 'user',
-        content: `${userContext}\n\nUser message: ${message}`,
-      },
-    ],
-  });
-
-  const raw = response.choices[0]?.message?.content || '';
-
-  // Extract JSON block from response
-  const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/);
-  const replyText = raw.replace(/```json\n[\s\S]*?\n```/, '').trim();
-
-  if (!jsonMatch) {
-    return { reply: raw };
-  }
-
   try {
-    const intent = JSON.parse(jsonMatch[1]) as TradeIntent;
-    return { reply: replyText, intent };
-  } catch {
-    return { reply: replyText };
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 1024,
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'system',
+          content: SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: `${userContext}\n\nUser message: ${message}`,
+        },
+      ],
+    });
+
+    const raw = response.choices[0]?.message?.content || '';
+
+    // Extract JSON block from response
+    const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/);
+    const replyText = raw.replace(/```json\n[\s\S]*?\n```/, '').trim();
+
+    if (!jsonMatch) {
+      return { reply: raw };
+    }
+
+    try {
+      const intent = JSON.parse(jsonMatch[1]) as TradeIntent;
+      return { reply: replyText, intent };
+    } catch {
+      return { reply: replyText };
+    }
+  } catch (error: any) {
+    console.error('❌ OpenAI API Error:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      type: error.type,
+    });
+    throw error;
   }
 }
