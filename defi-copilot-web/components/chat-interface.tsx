@@ -1,15 +1,70 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Send, Loader2 } from 'lucide-react'
+import { Send, Loader2, X } from 'lucide-react'
 import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
 import { CopilotLogo } from './logo'
+
+function CancelOrderCard({ order, userWallet, onCancelled }: { order: any; userWallet?: string; onCancelled: (id: string) => void }) {
+  const [cancelling, setCancelling] = useState(false)
+
+  const handleCancel = async () => {
+    if (!userWallet) return alert('Wallet not connected')
+    setCancelling(true)
+    try {
+      const txRes = await fetch(`/api/orders/${order.id}/cancel-tx?userWallet=${userWallet}`)
+      if (!txRes.ok) {
+        const err = await txRes.json()
+        if (err.error?.includes('No Jupiter')) {
+          await fetch('/api/orders/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: order.id, userWallet }) })
+          onCancelled(order.id)
+          return
+        }
+        throw new Error(err.error || 'Failed to get cancel tx')
+      }
+      const { tx } = await txRes.json()
+      const phantom = (window as any).phantom?.solana
+      if (!phantom) throw new Error('Phantom wallet not found')
+      if (!phantom.isConnected) await phantom.connect()
+      const { VersionedTransaction, Connection } = await import('@solana/web3.js')
+      const cancelTx = VersionedTransaction.deserialize(Buffer.from(tx, 'base64'))
+      const signedTx = await phantom.signTransaction(cancelTx)
+      const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com')
+      await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false })
+      await fetch('/api/orders/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: order.id, userWallet }) })
+      onCancelled(order.id)
+    } catch (e: any) {
+      alert(`Cancel failed: ${e.message}`)
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  return (
+    <div className="rounded-lg p-3 flex items-center justify-between" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+      <div className="text-xs" style={{ color: 'var(--foreground)' }}>
+        <div className="font-semibold">{order.type?.replace('_', ' ').toUpperCase()} — {order.amountIn} {order.tokenIn} → {order.tokenOut}</div>
+        {order.triggerPrice && <div style={{ color: '#7B70FF' }}>Trigger: ${order.triggerPrice}</div>}
+      </div>
+      <button
+        onClick={handleCancel}
+        disabled={cancelling}
+        className="ml-3 px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 disabled:opacity-40"
+        style={{ backgroundColor: 'rgba(255,107,107,0.15)', color: '#FF6B6B' }}
+      >
+        {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+        {cancelling ? 'Cancelling...' : 'Cancel Order'}
+      </button>
+    </div>
+  )
+}
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  cancelOrders?: any[]
   intent?: any
   requiresConfirmation?: boolean
 }
@@ -184,6 +239,24 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
             } catch (e) {
               console.error('Failed to fetch price:', e)
             }
+          }
+        } else if (action === 'cancel_order') {
+          const activeOrders = data.intent?.activeOrders || []
+          if (activeOrders.length === 0) {
+            // reply already set to "no active orders"
+          } else {
+            // Append cancel cards as a special message
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `cancel-cards-${Date.now()}`,
+                role: 'assistant',
+                content: data.reply,
+                cancelOrders: activeOrders,
+              },
+            ])
+            setLoading(false)
+            return
           }
         }
       }
@@ -492,6 +565,19 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
                 }}
               >
                 {message.content}
+                {/* Cancel order cards */}
+                {message.cancelOrders && message.cancelOrders.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {message.cancelOrders.map((order: any) => (
+                      <CancelOrderCard key={order.id} order={order} userWallet={address} onCancelled={(id) => {
+                        setMessages(prev => prev.map(m => m.id === message.id
+                          ? { ...m, cancelOrders: m.cancelOrders?.filter(o => o.id !== id) }
+                          : m
+                        ))
+                      }} />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))

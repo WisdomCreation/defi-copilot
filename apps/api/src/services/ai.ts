@@ -18,6 +18,7 @@ TRADING COMMANDS YOU SUPPORT:
 8. MEV Protection: "swap ETH to USDC with MEV protection"
 9. Leverage: "buy ETH with 3x leverage", "short BTC with $500"
 10. Partial: "sell exactly half my ETH position"
+11. Cancel Orders: "cancel my order", "cancel all orders", "cancel my limit order", "cancel my SOL order"
 
 Rules:
 1. Always respond with JSON block + human-readable reply
@@ -32,7 +33,7 @@ Rules:
 Response format (return this JSON + newline + your reply):
 \`\`\`json
 {
-  "action": "swap|limit|stop_loss|take_profit|dca|bridge|rebalance|leverage|query|alert",
+  "action": "swap|limit|stop_loss|take_profit|dca|bridge|rebalance|leverage|query|alert|cancel_order",
   "tokenIn": "ETH",
   "tokenOut": "USDC",
   "amountIn": null,
@@ -64,7 +65,11 @@ Reply: Limit order set! I'll buy SOL automatically when the price drops to $100.
 
 User: "buy $200 ETH every week for 10 weeks"
 JSON: {"action":"dca","tokenIn":"USDC","tokenOut":"ETH","amountUsd":"200","dcaInterval":"weekly","dcaCount":10,"chain":"ethereum"}
-Reply: DCA strategy activated! I'll buy $200 of ETH every week for 10 weeks automatically.`;
+Reply: DCA strategy activated! I'll buy $200 of ETH every week for 10 weeks automatically.
+
+User: "cancel my order" / "cancel my SOL limit order" / "cancel all orders"
+JSON: {"action":"cancel_order","chain":"solana"}
+Reply: I'll cancel your active order now.`;
 
 interface ParseIntentParams {
   message: string;

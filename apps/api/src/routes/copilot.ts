@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { parseIntent } from '../services/ai';
 import type { CopilotResponse } from '@defi-copilot/shared';
 import { findOrCreateUser, findOrCreateConversation, addMessage } from '../db';
+import { prisma } from '../db/prisma';
 import { 
   getJupiterQuote, 
   getTokenAddress, 
@@ -250,6 +251,34 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // Handle cancel_order: fetch active orders from DB and attach to intent
+      if (intent?.action === 'cancel_order') {
+        try {
+          const user = await prisma.user.findUnique({ where: { walletAddress: walletAddress } });
+          if (user) {
+            const activeOrders = await (prisma.order.findMany as any)({
+              where: { userId: user.id, status: 'watching' },
+              orderBy: { createdAt: 'desc' },
+              take: 10,
+            });
+            if (activeOrders.length === 0) {
+              aiReply = "You have no active orders to cancel.";
+              enrichedIntent = { ...intent, activeOrders: [] };
+            } else {
+              enrichedIntent = { ...intent, activeOrders };
+              aiReply = activeOrders.length === 1
+                ? `Found 1 active order: ${activeOrders[0].amountIn} ${activeOrders[0].tokenIn} → ${activeOrders[0].tokenOut} at $${activeOrders[0].triggerPrice}. Sign the cancel transaction to retrieve your funds.`
+                : `Found ${activeOrders.length} active orders. I'll show them below — click cancel on the ones you want to close.`;
+            }
+          } else {
+            aiReply = "No orders found for your wallet.";
+            enrichedIntent = { ...intent, activeOrders: [] };
+          }
+        } catch (e) {
+          console.error('Error fetching orders for cancel:', e);
+        }
+      }
+
       const response: CopilotResponse = {
         reply: aiReply,
         intent: enrichedIntent,
@@ -257,7 +286,7 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
           ? ['swap', 'limit', 'stop_loss', 'dca', 'bridge'].includes(enrichedIntent.action) &&
             !enrichedIntent.clarificationNeeded
           : false,
-        conversationId: conversationId || `temp-${Date.now()}`, // Temporary ID
+        conversationId: conversationId || `temp-${Date.now()}`,
       };
 
       return reply.send(response);
