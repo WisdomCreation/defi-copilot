@@ -100,6 +100,16 @@ export class OrderExecutor {
         return;
       }
 
+      // CRITICAL FIX: Add grace period to prevent immediate execution
+      // Don't execute orders created within last 60 seconds
+      const orderAge = Date.now() - new Date(order.createdAt).getTime();
+      const GRACE_PERIOD_MS = 60 * 1000; // 60 seconds
+      
+      if (orderAge < GRACE_PERIOD_MS) {
+        console.log(`⏳ Order ${order.id} in grace period (${Math.round(orderAge / 1000)}s old), skipping check`);
+        return;
+      }
+
       // Get current price
       const symbol = `${order.tokenOut}/USD`;
       const currentPrice = await priceMonitor.getPrice(symbol);

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { MessageSquare, Plus, Search, Settings, Code, FileText } from 'lucide-react'
 import { CopilotLogoSmall } from './logo'
 
@@ -13,11 +14,26 @@ interface Conversation {
 interface ChatHistoryProps {
   onNavigate?: (section: string) => void
   currentSection?: string
-  onClearHistory?: () => void
+  onNewChat?: () => void
+  userAddress?: string
 }
 
-export function ChatHistory({ onNavigate, currentSection = 'chats', onClearHistory }: ChatHistoryProps) {
-  const conversations: Conversation[] = []
+export function ChatHistory({ onNavigate, currentSection = 'chats', onNewChat, userAddress }: ChatHistoryProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([])
+
+  // Load conversation history from localStorage
+  useEffect(() => {
+    if (userAddress) {
+      const savedConversations = localStorage.getItem(`conversations_${userAddress}`)
+      if (savedConversations) {
+        try {
+          setConversations(JSON.parse(savedConversations))
+        } catch (error) {
+          console.error('Failed to load conversations:', error)
+        }
+      }
+    }
+  }, [userAddress])
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--sidebar)' }}>
@@ -30,7 +46,7 @@ export function ChatHistory({ onNavigate, currentSection = 'chats', onClearHisto
       {/* New Chat Button */}
       <div className="px-3 mb-4">
         <button 
-          onClick={onClearHistory}
+          onClick={onNewChat}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm"
           style={{ 
             backgroundColor: 'transparent',

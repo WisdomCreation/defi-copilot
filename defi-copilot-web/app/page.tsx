@@ -15,10 +15,11 @@ export default function Home() {
   
   const chainName = chain?.name.toLowerCase() || 'ethereum'
 
-  const handleClearHistory = () => {
-    if (address && confirm('Are you sure you want to clear your chat history?')) {
-      localStorage.removeItem(`chat_history_${address}`)
-      setChatKey(prev => prev + 1) // Force chat interface to re-mount
+  const handleNewChat = () => {
+    if (address) {
+      // Just start a fresh chat by re-mounting the component
+      // The chat interface will auto-save the current conversation
+      setChatKey(prev => prev + 1)
     }
   }
 
@@ -29,7 +30,8 @@ export default function Home() {
         <ChatHistory 
           onNavigate={setCurrentSection}
           currentSection={currentSection}
-          onClearHistory={handleClearHistory}
+          onNewChat={handleNewChat}
+          userAddress={address}
         />
       </div>
 
