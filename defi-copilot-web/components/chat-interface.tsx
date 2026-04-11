@@ -24,7 +24,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
       <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Portfolio</span>
-          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>${qr.totalUsd?.toFixed(2)}</span>
+          <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>${qr.totalUsd?.toFixed(2)}</span>
         </div>
         {qr.holdings.map((h: any, i: number) => (
           <div key={i} className="px-3 py-2 flex justify-between items-center text-xs" style={{ borderTop: '1px solid var(--border)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
@@ -35,7 +35,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
             <div className="text-right">
               <div style={{ color: 'var(--foreground)' }}>${h.usdValue?.toFixed(2)}</div>
               {h.change24h !== 0 && (
-                <div style={{ color: h.change24h >= 0 ? '#00C9A7' : '#FF6B6B' }}>
+                <div style={{ color: h.change24h >= 0 ? '#FFFFFF' : '#FFFFFF' }}>
                   {h.change24h >= 0 ? '+' : ''}{h.change24h?.toFixed(2)}%
                 </div>
               )}
@@ -53,7 +53,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
         {qr.fearGreed && (
           <div className="p-3 rounded-lg flex items-center justify-between text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
             <span style={{ color: '#999' }}>Fear & Greed Index</span>
-            <span className="font-bold" style={{ color: parseInt(qr.fearGreed.value) > 60 ? '#00C9A7' : parseInt(qr.fearGreed.value) < 40 ? '#FF6B6B' : '#FFB347' }}>
+            <span className="font-bold" style={{ color: parseInt(qr.fearGreed.value) > 60 ? '#FFFFFF' : parseInt(qr.fearGreed.value) < 40 ? '#FFFFFF' : '#AAAAAA' }}>
               {qr.fearGreed.value} — {qr.fearGreed.label}
             </span>
           </div>
@@ -69,7 +69,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
             </div>
             <div className="text-right">
               <div className="font-bold" style={{ color: 'var(--foreground)' }}>${p.current_price?.toLocaleString()}</div>
-              <div style={{ color: p.price_change_percentage_24h >= 0 ? '#00C9A7' : '#FF6B6B' }}>
+              <div style={{ color: p.price_change_percentage_24h >= 0 ? '#FFFFFF' : '#FFFFFF' }}>
                 {p.price_change_percentage_24h >= 0 ? '+' : ''}{p.price_change_percentage_24h?.toFixed(2)}%
               </div>
             </div>
@@ -85,7 +85,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
                   <span style={{ color: 'var(--foreground)' }}>{t.name}</span>
                   <span style={{ color: '#999' }}>{t.symbol?.toUpperCase()}</span>
                 </div>
-                {t.rank && <span style={{ color: '#7B70FF' }}>#{t.rank}</span>}
+                {t.rank && <span style={{ color: '#FFFFFF' }}>#{t.rank}</span>}
               </div>
             ))}
           </div>
@@ -109,8 +109,8 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
               <span className="ml-2" style={{ color: '#999' }}>{p.chain} · {p.symbol}</span>
             </div>
             <div className="text-right">
-              <div className="font-bold" style={{ color: '#00C9A7' }}>{p.apy}% APY</div>
-              <div style={{ color: p.risk === 'high' ? '#FF6B6B' : p.risk === 'medium' ? '#FFB347' : '#00C9A7' }}>
+              <div className="font-bold" style={{ color: '#FFFFFF' }}>{p.apy}% APY</div>
+              <div style={{ color: p.risk === 'high' ? '#FFFFFF' : p.risk === 'medium' ? '#AAAAAA' : '#FFFFFF' }}>
                 {p.risk} risk · ${(p.tvl / 1e6).toFixed(1)}M TVL
               </div>
             </div>
@@ -134,7 +134,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
           <div key={i} className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
             <div className="flex justify-between">
               <span style={{ color: 'var(--foreground)' }}>{tx.description || tx.type}</span>
-              <a href={`https://solscan.io/tx/${tx.signature}`} target="_blank" rel="noreferrer" className="text-xs" style={{ color: '#7B70FF' }}>View</a>
+              <a href={`https://solscan.io/tx/${tx.signature}`} target="_blank" rel="noreferrer" className="text-xs" style={{ color: '#FFFFFF' }}>View</a>
             </div>
             <div style={{ color: '#999' }}>{tx.timestamp ? new Date(tx.timestamp * 1000).toLocaleDateString() : ''}</div>
           </div>
@@ -149,12 +149,12 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
       <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Tax Report {qr.year}</span>
-          <span className="text-xs" style={{ color: '#7B70FF' }}>{qr.taxableEvents} taxable events</span>
+          <span className="text-xs" style={{ color: '#FFFFFF' }}>{qr.taxableEvents} taxable events</span>
         </div>
         <div className="px-3 py-2 grid grid-cols-3 gap-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="text-center"><div className="font-bold" style={{ color: 'var(--foreground)' }}>{qr.totalSwaps}</div><div style={{ color: '#999' }}>Total Swaps</div></div>
-          <div className="text-center"><div className="font-bold" style={{ color: '#FF6B6B' }}>{qr.taxableEvents}</div><div style={{ color: '#999' }}>Taxable</div></div>
-          <div className="text-center"><div className="font-bold" style={{ color: '#00C9A7' }}>{qr.disposals}</div><div style={{ color: '#999' }}>Disposals</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#FFFFFF' }}>{qr.taxableEvents}</div><div style={{ color: '#999' }}>Taxable</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#FFFFFF' }}>{qr.disposals}</div><div style={{ color: '#999' }}>Disposals</div></div>
         </div>
         {qr.swaps?.slice(0, 5).map((s: any, i: number) => (
           <div key={i} className="px-3 py-2 text-xs flex justify-between" style={{ borderTop: '1px solid var(--border)' }}>
@@ -175,14 +175,14 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Capital Gains Estimate</span>
         </div>
         <div className="px-3 py-2 grid grid-cols-3 gap-3 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
-          <div><div className="font-bold text-sm" style={{ color: parseFloat(qr.realizedGains) >= 0 ? '#00C9A7' : '#FF6B6B' }}>${qr.realizedGains}</div><div style={{ color: '#999' }}>Realized Gains</div></div>
-          <div><div className="font-bold text-sm" style={{ color: '#FFB347' }}>${qr.estimatedTax}</div><div style={{ color: '#999' }}>Est. Tax (~20%)</div></div>
+          <div><div className="font-bold text-sm" style={{ color: parseFloat(qr.realizedGains) >= 0 ? '#FFFFFF' : '#FFFFFF' }}>${qr.realizedGains}</div><div style={{ color: '#999' }}>Realized Gains</div></div>
+          <div><div className="font-bold text-sm" style={{ color: '#AAAAAA' }}>${qr.estimatedTax}</div><div style={{ color: '#999' }}>Est. Tax (~20%)</div></div>
           <div><div className="font-bold text-sm" style={{ color: 'var(--foreground)' }}>{qr.disposals || 0}</div><div style={{ color: '#999' }}>Disposals</div></div>
         </div>
         {qr.disposalDetails?.length > 0 && qr.disposalDetails.map((d: any, i: number) => (
           <div key={i} className="px-3 py-2 text-xs flex justify-between" style={{ borderTop: '1px solid var(--border)' }}>
             <div style={{ color: 'var(--foreground)' }}>Sold {d.amount?.toFixed ? d.amount.toFixed(4) : d.amount} {d.token} <span style={{ color: '#999' }}>on {d.date}</span></div>
-            <div style={{ color: parseFloat(d.gain) >= 0 ? '#00C9A7' : '#FF6B6B' }}>{parseFloat(d.gain) >= 0 ? '+' : ''}${d.gain}</div>
+            <div style={{ color: parseFloat(d.gain) >= 0 ? '#FFFFFF' : '#FFFFFF' }}>{parseFloat(d.gain) >= 0 ? '+' : ''}${d.gain}</div>
           </div>
         ))}
         {qr.realizedGains === '0.00' && qr.totalSwaps === 0 && (
@@ -204,7 +204,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
           <div style={{ color: '#999' }}>{qr.rowCount} transactions</div>
         </div>
         {blob && (
-          <a href={url} download="defi-trades.csv" className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+          <a href={url} download="defi-trades.csv" className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}>
             Download CSV
           </a>
         )}
@@ -225,7 +225,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
         {qr.opportunities.map((o: any, i: number) => (
           <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
             <div><span className="font-semibold" style={{ color: 'var(--foreground)' }}>{o.symbol}</span><span className="ml-2" style={{ color: '#999' }}>Basis: ${o.costBasis}</span></div>
-            <div className="text-right"><div style={{ color: '#FF6B6B' }}>{o.unrealizedLoss} USD ({o.lossPercent}%)</div><div style={{ color: '#999' }}>Current: ${o.currentValue}</div></div>
+            <div className="text-right"><div style={{ color: '#FFFFFF' }}>{o.unrealizedLoss} USD ({o.lossPercent}%)</div><div style={{ color: '#999' }}>Current: ${o.currentValue}</div></div>
           </div>
         ))}
       </div>
@@ -238,7 +238,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
       <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Proof of Funds</span>
-          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>${qr.totalUsd} USD</span>
+          <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>${qr.totalUsd} USD</span>
         </div>
         <div className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
           <div>{qr.walletAddress?.slice(0, 16)}...{qr.walletAddress?.slice(-8)}</div>
@@ -247,11 +247,11 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
         {qr.holdings?.map((h: any, i: number) => (
           <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
             <span style={{ color: 'var(--foreground)' }}>{h.symbol} — {h.amount}</span>
-            <span style={{ color: '#00C9A7' }}>${h.usdValue}</span>
+            <span style={{ color: '#FFFFFF' }}>${h.usdValue}</span>
           </div>
         ))}
         <div className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
-          <a href={qr.explorerUrl} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>
+          <a href={qr.explorerUrl} target="_blank" rel="noreferrer" style={{ color: '#FFFFFF' }}>View on Solscan →</a>
         </div>
       </div>
     )
@@ -291,12 +291,12 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
       <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Batch Payment — {qr.token}</span>
-          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>Total: {qr.total} {qr.token}</span>
+          <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>Total: {qr.total} {qr.token}</span>
         </div>
         {qr.recipients?.map((r: any, i: number) => (
           <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
             <span style={{ color: 'var(--foreground)' }}>{r.displayName || r.address?.slice(0,16)}...</span>
-            <span style={{ color: '#00C9A7' }}>{r.amount} {qr.token}</span>
+            <span style={{ color: '#FFFFFF' }}>{r.amount} {qr.token}</span>
           </div>
         ))}
         <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>
@@ -314,21 +314,21 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Payment Request — {qr.amount} {qr.token}</span>
         </div>
         <div className="px-3 py-2 space-y-2">
-          <div className="text-xs break-all p-2 rounded" style={{ backgroundColor: 'rgba(123,112,255,0.08)', color: '#7B70FF', fontFamily: 'monospace' }}>
+          <div className="text-xs break-all p-2 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.04)', color: '#FFFFFF', fontFamily: 'monospace' }}>
             {qr.webUrl}
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(qr.webUrl)}
               className="flex-1 py-1.5 rounded text-xs font-medium"
-              style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}
             >
               Copy Link
             </button>
             <button
               onClick={() => navigator.clipboard.writeText(qr.solanaPayUrl)}
               className="flex-1 py-1.5 rounded text-xs font-medium"
-              style={{ backgroundColor: 'rgba(0,201,167,0.1)', color: '#00C9A7' }}
+              style={{ backgroundColor: 'rgba(0,201,167,0.1)', color: '#FFFFFF' }}
             >
               Copy Solana Pay URL
             </button>
@@ -344,17 +344,17 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
       <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Payments — {qr.month}</span>
-          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>${qr.totalUsd} sent</span>
+          <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>${qr.totalUsd} sent</span>
         </div>
         <div className="px-3 py-2 grid grid-cols-3 gap-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="text-center"><div className="font-bold" style={{ color: 'var(--foreground)' }}>{qr.transferCount}</div><div style={{ color: '#999' }}>Transfers</div></div>
-          <div className="text-center"><div className="font-bold" style={{ color: '#FF6B6B' }}>{qr.totalSolOut} SOL</div><div style={{ color: '#999' }}>SOL Sent</div></div>
-          <div className="text-center"><div className="font-bold" style={{ color: '#00C9A7' }}>${qr.totalUsdcOut}</div><div style={{ color: '#999' }}>USDC Sent</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#FFFFFF' }}>{qr.totalSolOut} SOL</div><div style={{ color: '#999' }}>SOL Sent</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#FFFFFF' }}>${qr.totalUsdcOut}</div><div style={{ color: '#999' }}>USDC Sent</div></div>
         </div>
         {qr.transfers?.map((t: any, i: number) => (
           <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
             <div><span style={{ color: 'var(--foreground)' }}>To {t.to}</span><span className="ml-2" style={{ color: '#999' }}>{t.date}</span></div>
-            <span style={{ color: '#FFB347' }}>{t.amount?.toFixed ? t.amount.toFixed(4) : t.amount} {t.token}</span>
+            <span style={{ color: '#AAAAAA' }}>{t.amount?.toFixed ? t.amount.toFixed(4) : t.amount} {t.token}</span>
           </div>
         ))}
         {(!qr.transfers?.length) && <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>No outbound payments this month.</div>}
@@ -382,20 +382,20 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
 
   if (qr.type === 'stealth_address') {
     return (
-      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.3)' }}>
-        <div className="px-3 py-2" style={{ backgroundColor: 'rgba(123,112,255,0.08)' }}>
-          <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>🔮 Stealth Address — Umbra Protocol</span>
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div className="px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+          <span className="text-xs font-semibold" style={{ color: '#FFFFFF' }}>🔮 Stealth Address — Umbra Protocol</span>
         </div>
         <div className="px-3 py-2 space-y-1.5 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
           {qr.instructions?.map((step: string, i: number) => (
-            <div key={i} className="flex gap-2"><span style={{ color: '#7B70FF' }}>{i + 1}.</span><span style={{ color: 'var(--foreground)' }}>{step}</span></div>
+            <div key={i} className="flex gap-2"><span style={{ color: '#FFFFFF' }}>{i + 1}.</span><span style={{ color: 'var(--foreground)' }}>{step}</span></div>
           ))}
         </div>
         <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>{qr.note}</div>
         <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
           <a href={qr.umbraUrl} target="_blank" rel="noreferrer"
             className="block w-full py-2 rounded-lg text-xs font-semibold text-center"
-            style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+            style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}>
             Open Umbra Protocol →
           </a>
         </div>
@@ -405,13 +405,13 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
 
   if (qr.type === 'wallet_screen') {
     return (
-      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: `1px solid ${qr.isClean ? 'rgba(0,201,167,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: `1px solid ${qr.isClean ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.12)'}` }}>
         <div className="flex justify-between mb-2">
           <span className="font-semibold" style={{ color: 'var(--foreground)' }}>Wallet Screen — {qr.source}</span>
-          <span className="font-bold" style={{ color: qr.isClean ? '#00C9A7' : '#FF6B6B' }}>{qr.isClean ? '✓ Clean' : `⚠ ${qr.riskLevel?.toUpperCase()} RISK`}</span>
+          <span className="font-bold" style={{ color: qr.isClean ? '#FFFFFF' : '#FFFFFF' }}>{qr.isClean ? '✓ Clean' : `⚠ ${qr.riskLevel?.toUpperCase()} RISK`}</span>
         </div>
-        <div className="font-mono mb-2" style={{ color: '#7B70FF' }}>{qr.address?.slice(0, 20)}...</div>
-        {qr.flags?.length > 0 && <div className="space-y-1">{qr.flags.map((f: string, i: number) => <div key={i} style={{ color: '#FF6B6B' }}>⚠ {f.replace(/_/g, ' ')}</div>)}</div>}
+        <div className="font-mono mb-2" style={{ color: '#FFFFFF' }}>{qr.address?.slice(0, 20)}...</div>
+        {qr.flags?.length > 0 && <div className="space-y-1">{qr.flags.map((f: string, i: number) => <div key={i} style={{ color: '#FFFFFF' }}>⚠ {f.replace(/_/g, ' ')}</div>)}</div>}
         {qr.flags?.length === 0 && <div style={{ color: '#999' }}>No risk flags found.</div>}
       </div>
     )
@@ -425,15 +425,15 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
   // OFAC check
   if (qr.type === 'ofac_check') {
     return (
-      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--background)', border: `1px solid ${qr.isClean ? 'rgba(0,201,167,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--background)', border: `1px solid ${qr.isClean ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.12)'}` }}>
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold" style={{ color: 'var(--foreground)' }}>Compliance Check</span>
-          <span className="font-bold" style={{ color: qr.isClean ? '#00C9A7' : '#FF6B6B' }}>
+          <span className="font-bold" style={{ color: qr.isClean ? '#FFFFFF' : '#FFFFFF' }}>
             {qr.isClean ? '✓ Clean' : '⚠ Risk Detected'} — {qr.riskLevel?.toUpperCase()} risk
           </span>
         </div>
         {qr.flags?.length > 0 && (
-          <div className="mt-2 space-y-1">{qr.flags.map((f: string, i: number) => <div key={i} className="text-xs" style={{ color: '#FF6B6B' }}>• {f}</div>)}</div>
+          <div className="mt-2 space-y-1">{qr.flags.map((f: string, i: number) => <div key={i} className="text-xs" style={{ color: '#FFFFFF' }}>• {f}</div>)}</div>
         )}
         {qr.note && <div className="mt-1 text-xs" style={{ color: '#999' }}>{qr.note}</div>}
         <div className="mt-1 text-xs" style={{ color: '#999' }}>Checked: {new Date(qr.checkedAt).toLocaleString()}</div>
@@ -444,7 +444,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
   return null
 }
 
-const PRIVACY_LEVEL_COLOR: Record<string, string> = { Maximum: '#FF6B6B', High: '#FFB347', Medium: '#7B70FF' }
+const PRIVACY_LEVEL_COLOR: Record<string, string> = { Maximum: '#FFFFFF', High: '#AAAAAA', Medium: '#FFFFFF' }
 
 function PrivacySendReadyCard({ qr, userAddress }: { qr: any; userAddress?: string }) {
   const [sending, setSending] = useState(false)
@@ -481,33 +481,33 @@ function PrivacySendReadyCard({ qr, userAddress }: { qr: any; userAddress?: stri
   }
 
   if (done) return (
-    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
-      <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Sent to {qr.provider}!</div>
+    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+      <div className="font-semibold mb-1" style={{ color: '#FFFFFF' }}>✓ Sent to {qr.provider}!</div>
       <div style={{ color: '#999' }} className="mb-1">Private routing in progress — ETA: {qr.eta}</div>
-      <a href={`https://solscan.io/tx/${done}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View deposit on Solscan →</a>
+      <a href={`https://solscan.io/tx/${done}`} target="_blank" rel="noreferrer" style={{ color: '#FFFFFF' }}>View deposit on Solscan →</a>
     </div>
   )
 
   return (
-    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.4)' }}>
-      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(123,112,255,0.1)' }}>
-        <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>🔒 {qr.provider} — Private Send Ready</span>
-        <span className="text-xs" style={{ color: '#00C9A7' }}>ETA: {qr.eta}</span>
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+        <span className="text-xs font-semibold" style={{ color: '#FFFFFF' }}>🔒 {qr.provider} — Private Send Ready</span>
+        <span className="text-xs" style={{ color: '#FFFFFF' }}>ETA: {qr.eta}</span>
       </div>
       <div className="px-3 py-2 text-xs space-y-1.5" style={{ borderTop: '1px solid var(--border)' }}>
         <div style={{ color: '#999' }}>{qr.instruction}</div>
-        <div className="flex justify-between pt-1"><span style={{ color: '#999' }}>You send</span><span style={{ color: '#FFB347' }}>{qr.amountIn} {qr.tokenIn}</span></div>
-        <div className="flex justify-between"><span style={{ color: '#999' }}>Recipient gets</span><span style={{ color: '#00C9A7' }}>{qr.amountOut} {qr.tokenOut}</span></div>
+        <div className="flex justify-between pt-1"><span style={{ color: '#999' }}>You send</span><span style={{ color: '#AAAAAA' }}>{qr.amountIn} {qr.tokenIn}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Recipient gets</span><span style={{ color: '#FFFFFF' }}>{qr.amountOut} {qr.tokenOut}</span></div>
         <div className="flex justify-between"><span style={{ color: '#999' }}>Expires</span><span style={{ color: 'var(--foreground)' }}>{qr.expires ? new Date(qr.expires).toLocaleTimeString() : 'N/A'}</span></div>
       </div>
       {/* Deposit address */}
       <div className="px-3 py-2 space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="text-xs" style={{ color: '#999' }}>Deposit address (send your funds here):</div>
         <div className="flex items-center gap-2">
-          <div className="font-mono text-[10px] flex-1 p-1.5 rounded truncate" style={{ backgroundColor: 'var(--hover)', color: '#7B70FF' }}>
+          <div className="font-mono text-[10px] flex-1 p-1.5 rounded truncate" style={{ backgroundColor: 'var(--hover)', color: '#FFFFFF' }}>
             {qr.depositAddress}
           </div>
-          <button onClick={handleCopy} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+          <button onClick={handleCopy} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}>
             {copied ? '✓' : 'Copy'}
           </button>
         </div>
@@ -516,7 +516,7 @@ function PrivacySendReadyCard({ qr, userAddress }: { qr: any; userAddress?: stri
       <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
         <button onClick={handleSend} disabled={sending}
           className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2"
-          style={{ backgroundColor: sending ? 'rgba(123,112,255,0.1)' : 'rgba(123,112,255,0.2)', color: '#7B70FF' }}>
+          style={{ backgroundColor: sending ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.10)', color: '#FFFFFF' }}>
           {sending ? <><Loader2 className="w-3 h-3 animate-spin" />Sending via Phantom...</> : `Send ${qr.amountIn} ${qr.tokenIn} via Phantom →`}
         </button>
       </div>
@@ -597,7 +597,7 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
           className="px-3 py-2.5 grid grid-cols-5 items-center text-xs cursor-pointer transition-colors"
           style={{
             borderTop: '1px solid var(--border)',
-            backgroundColor: p.recommended ? 'rgba(0,201,167,0.06)' : selected === p.provider ? 'rgba(123,112,255,0.06)' : 'transparent',
+            backgroundColor: p.recommended ? 'rgba(255,255,255,0.03)' : selected === p.provider ? 'rgba(255,255,255,0.03)' : 'transparent',
           }}
         >
           {/* Provider name + badge */}
@@ -607,7 +607,7 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
               <div className="font-semibold flex items-center gap-1" style={{ color: 'var(--foreground)' }}>
                 {p.provider}
                 {p.recommended && (
-                  <span className="px-1 py-0.5 rounded text-[10px] font-bold" style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}>
+                  <span className="px-1 py-0.5 rounded text-[10px] font-bold" style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}>
                     ✓ Best
                   </span>
                 )}
@@ -618,7 +618,7 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
 
           {/* Fee */}
           <div className="text-center">
-            <div className="font-semibold" style={{ color: '#FFB347' }}>
+            <div className="font-semibold" style={{ color: '#AAAAAA' }}>
               {p.feePct === 0 ? 'Free' : `${p.feePct}%`}
             </div>
             <div style={{ color: '#999' }} className="text-[10px]">${p.feeUsd}</div>
@@ -636,8 +636,8 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
           <div className="text-center">
             <div style={{ color: 'var(--foreground)' }}>{p.estimatedTime}</div>
             {initiating === p.provider
-              ? <Loader2 className="w-3 h-3 animate-spin mx-auto mt-0.5" style={{ color: '#7B70FF' }} />
-              : <div style={{ color: p.apiDirect ? '#00C9A7' : '#7B70FF' }} className="text-[10px]">{p.apiDirect ? 'Direct ✓' : 'Open →'}</div>
+              ? <Loader2 className="w-3 h-3 animate-spin mx-auto mt-0.5" style={{ color: '#FFFFFF' }} />
+              : <div style={{ color: p.apiDirect ? '#FFFFFF' : '#FFFFFF' }} className="text-[10px]">{p.apiDirect ? 'Direct ✓' : 'Open →'}</div>
             }
           </div>
         </div>
@@ -646,7 +646,7 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
       {/* Recommended summary */}
       {qr.recommended && (
         <div className="px-3 py-2 text-xs flex items-center gap-1" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
-          <span>System selected <strong style={{ color: '#00C9A7' }}>{qr.recommended}</strong> as best. <strong style={{ color: '#00C9A7' }}>GhostPay</strong> and <strong style={{ color: '#00C9A7' }}>Houdini</strong> execute directly — no redirect. Railgun and Umbra open their apps.</span>
+          <span>System selected <strong style={{ color: '#FFFFFF' }}>{qr.recommended}</strong> as best. <strong style={{ color: '#FFFFFF' }}>GhostPay</strong> and <strong style={{ color: '#FFFFFF' }}>Houdini</strong> execute directly — no redirect. Railgun and Umbra open their apps.</span>
         </div>
       )}
     </div>
@@ -781,7 +781,7 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
 
   if (!entry) {
     if (!parseScheduleDate(qr.scheduleDate || '')) return (
-      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#FF6B6B' }}>
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#FFFFFF' }}>
         Could not parse &quot;{qr.scheduleDate}&quot;. Try &quot;april 15&quot;, &quot;tomorrow&quot;, or &quot;in 3 days&quot;.
       </div>
     )
@@ -789,9 +789,9 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
   }
 
   if (entry.status === 'sent') return (
-    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
-      <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Payment sent automatically!</div>
-      {entry.txSignature && <a href={`https://solscan.io/tx/${entry.txSignature}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>}
+    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+      <div className="font-semibold mb-1" style={{ color: '#FFFFFF' }}>✓ Payment sent automatically!</div>
+      {entry.txSignature && <a href={`https://solscan.io/tx/${entry.txSignature}`} target="_blank" rel="noreferrer" style={{ color: '#FFFFFF' }}>View on Solscan →</a>}
     </div>
   )
   if (cancelled || entry.status === 'cancelled') return (
@@ -801,31 +801,31 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
   const hasSessionKey = !!sessionKey && setupStep === 'ready'
 
   return (
-    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.3)' }}>
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
       {/* Header */}
-      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(123,112,255,0.08)' }}>
-        <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>⏰ Scheduled Payment</span>
-        <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>{timeLeft ? `in ${timeLeft}` : entry.label}</span>
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+        <span className="text-xs font-semibold" style={{ color: '#FFFFFF' }}>⏰ Scheduled Payment</span>
+        <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>{timeLeft ? `in ${timeLeft}` : entry.label}</span>
       </div>
 
       {/* Payment details */}
       <div className="px-3 py-2 text-xs space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{entry.toDisplay}</span></div>
         <div className="flex justify-between"><span style={{ color: '#999' }}>Amount</span><span style={{ color: 'var(--foreground)' }}>{entry.amount} {entry.token}</span></div>
-        <div className="flex justify-between"><span style={{ color: '#999' }}>Send date</span><span style={{ color: '#7B70FF' }}>{entry.label}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Send date</span><span style={{ color: '#FFFFFF' }}>{entry.label}</span></div>
         <div className="flex justify-between">
           <span style={{ color: '#999' }}>Mode</span>
-          <span style={{ color: hasSessionKey ? '#00C9A7' : '#FFB347' }}>
+          <span style={{ color: hasSessionKey ? '#FFFFFF' : '#AAAAAA' }}>
             {hasSessionKey ? '🔑 Session key — fully automatic' : '⚠ Phantom required on send date'}
           </span>
         </div>
-        {statusMsg && <div style={{ color: '#FFB347' }}>{statusMsg}</div>}
+        {statusMsg && <div style={{ color: '#AAAAAA' }}>{statusMsg}</div>}
       </div>
 
       {/* Session key setup */}
       {!hasSessionKey && (
-        <div className="px-3 py-2 space-y-2 text-xs" style={{ borderTop: '1px solid var(--border)', backgroundColor: 'rgba(123,112,255,0.04)' }}>
-          <div className="font-semibold" style={{ color: '#7B70FF' }}>🔑 Enable auto-send with Session Key</div>
+        <div className="px-3 py-2 space-y-2 text-xs" style={{ borderTop: '1px solid var(--border)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+          <div className="font-semibold" style={{ color: '#FFFFFF' }}>🔑 Enable auto-send with Session Key</div>
           <div style={{ color: '#999' }}>
             A session key lets this payment fire automatically without Phantom approval.
             You sign once now, then it sends itself on {entry.label}.
@@ -833,7 +833,7 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
           {setupStep === 'idle' && (
             <button onClick={handleCreateSessionKey}
               className="w-full py-1.5 rounded font-medium"
-              style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}>
               Set Up Session Key (sign message — no gas)
             </button>
           )}
@@ -843,33 +843,33 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
           {setupStep === 'funding' && sessionKey && (
             <div className="space-y-2">
               <div style={{ color: '#999' }}>
-                Fund the session wallet with <strong style={{ color: '#FFB347' }}>{(qr.amount + 0.005).toFixed(4)} SOL</strong> (payment amount + fees).
+                Fund the session wallet with <strong style={{ color: '#AAAAAA' }}>{(qr.amount + 0.005).toFixed(4)} SOL</strong> (payment amount + fees).
                 This is the only Phantom approval needed.
               </div>
-              <div className="font-mono text-[10px] p-1.5 rounded break-all" style={{ backgroundColor: 'var(--hover)', color: '#7B70FF' }}>
+              <div className="font-mono text-[10px] p-1.5 rounded break-all" style={{ backgroundColor: 'var(--hover)', color: '#FFFFFF' }}>
                 {sessionKey.publicKey}
               </div>
               <button onClick={handleFundSessionKey}
                 className="w-full py-1.5 rounded font-medium"
-                style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}>
+                style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}>
                 Fund Session Wallet via Phantom (one-time)
               </button>
             </div>
           )}
-          {setupError && <div style={{ color: '#FF6B6B' }}>{setupError}</div>}
+          {setupError && <div style={{ color: '#FFFFFF' }}>{setupError}</div>}
         </div>
       )}
 
       {hasSessionKey && (
         <div className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
-          Session wallet balance: <strong style={{ color: '#00C9A7' }}>{sessionBalance.toFixed(4)} SOL</strong> · Expires {new Date(sessionKey!.expiresAt).toLocaleDateString()}
+          Session wallet balance: <strong style={{ color: '#FFFFFF' }}>{sessionBalance.toFixed(4)} SOL</strong> · Expires {new Date(sessionKey!.expiresAt).toLocaleDateString()}
         </div>
       )}
 
       <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
         <button onClick={() => { cancelScheduledPayment(userAddress!, entry.id); setCancelled(true) }}
           className="w-full py-1.5 rounded text-xs font-medium"
-          style={{ backgroundColor: 'rgba(255,107,107,0.1)', color: '#FF6B6B' }}>
+          style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFFFFF' }}>
           Cancel Scheduled Payment
         </button>
       </div>
@@ -932,7 +932,7 @@ function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string 
                 setSaved(true)
               }}
               className="w-full py-1.5 rounded text-xs font-semibold flex items-center justify-center gap-1"
-              style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}
             >
               <UserPlus className="w-3 h-3" /> Save Contact
             </button>
@@ -942,9 +942,9 @@ function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string 
     }
     return (
       <div className="mt-3 p-3 rounded-lg flex items-center gap-2 text-xs"
-        style={{ backgroundColor: saved ? 'rgba(0,201,167,0.08)' : 'var(--background)', border: `1px solid ${saved ? 'rgba(0,201,167,0.3)' : 'var(--border)'}` }}>
+        style={{ backgroundColor: saved ? 'rgba(255,255,255,0.04)' : 'var(--background)', border: `1px solid ${saved ? 'rgba(255,255,255,0.12)' : 'var(--border)'}` }}>
         {saved
-          ? <><Check className="w-3 h-3" style={{ color: '#00C9A7' }} /><span style={{ color: '#00C9A7' }}>Saved <strong>{qr.contactName}</strong> → {qr.contactAddress?.slice(0, 12)}...</span></>
+          ? <><Check className="w-3 h-3" style={{ color: '#FFFFFF' }} /><span style={{ color: '#FFFFFF' }}>Saved <strong>{qr.contactName}</strong> → {qr.contactAddress?.slice(0, 12)}...</span></>
           : <><Loader2 className="w-3 h-3 animate-spin" /><span style={{ color: '#999' }}>Saving...</span></>
         }
       </div>
@@ -955,9 +955,9 @@ function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string 
   if (qr.queryType === 'delete') {
     return (
       <div className="mt-3 p-3 rounded-lg flex items-center gap-2 text-xs"
-        style={{ backgroundColor: deleted ? 'rgba(255,107,107,0.06)' : 'var(--background)', border: `1px solid ${deleted ? 'rgba(255,107,107,0.3)' : 'var(--border)'}` }}>
+        style={{ backgroundColor: deleted ? 'rgba(255,107,107,0.06)' : 'var(--background)', border: `1px solid ${deleted ? 'rgba(255,255,255,0.12)' : 'var(--border)'}` }}>
         {deleted
-          ? <><Trash2 className="w-3 h-3" style={{ color: '#FF6B6B' }} /><span style={{ color: '#FF6B6B' }}><strong>{qr.contactName}</strong> removed from contacts.</span></>
+          ? <><Trash2 className="w-3 h-3" style={{ color: '#FFFFFF' }} /><span style={{ color: '#FFFFFF' }}><strong>{qr.contactName}</strong> removed from contacts.</span></>
           : <><Loader2 className="w-3 h-3 animate-spin" /><span style={{ color: '#999' }}>Removing...</span></>
         }
       </div>
@@ -970,7 +970,7 @@ function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string 
     return (
       <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
         {found
-          ? <div><div className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{found.displayName}</div><div className="font-mono" style={{ color: '#7B70FF' }}>{found.address}</div></div>
+          ? <div><div className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{found.displayName}</div><div className="font-mono" style={{ color: '#FFFFFF' }}>{found.address}</div></div>
           : <span style={{ color: '#999' }}>No contact found for &quot;{qr.contactName}&quot;.</span>
         }
       </div>
@@ -991,14 +991,14 @@ function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string 
         <div key={i} className="px-3 py-2 flex items-center justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
           <div>
             <div className="font-semibold" style={{ color: 'var(--foreground)' }}>{c.displayName}</div>
-            <div className="font-mono text-xs truncate max-w-[180px]" style={{ color: '#7B70FF' }}>{c.address}</div>
+            <div className="font-mono text-xs truncate max-w-[180px]" style={{ color: '#FFFFFF' }}>{c.address}</div>
           </div>
           <button
             onClick={() => { if (userAddress) { deleteContact(userAddress, c.displayName); setContacts(getContacts(userAddress)) } }}
             className="p-1 rounded opacity-50 hover:opacity-100"
             title="Remove"
           >
-            <Trash2 className="w-3 h-3" style={{ color: '#FF6B6B' }} />
+            <Trash2 className="w-3 h-3" style={{ color: '#FFFFFF' }} />
           </button>
         </div>
       ))}
@@ -1058,9 +1058,9 @@ function PaymentConfirmCard({ qr, fromWallet }: { qr: any; fromWallet?: string }
 
   if (done) {
     return (
-      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
-        <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Payment sent!</div>
-        <a href={`https://solscan.io/tx/${done}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div className="font-semibold mb-1" style={{ color: '#FFFFFF' }}>✓ Payment sent!</div>
+        <a href={`https://solscan.io/tx/${done}`} target="_blank" rel="noreferrer" style={{ color: '#FFFFFF' }}>View on Solscan →</a>
       </div>
     )
   }
@@ -1069,7 +1069,7 @@ function PaymentConfirmCard({ qr, fromWallet }: { qr: any; fromWallet?: string }
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
       <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
         <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Send {qr.token}</span>
-        <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>~${Math.abs(parseFloat(qr.usdValue || '0')).toFixed(2)}</span>
+        <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>~${Math.abs(parseFloat(qr.usdValue || '0')).toFixed(2)}</span>
       </div>
       <div className="px-3 py-2 text-xs space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{qr.toDisplay}</span></div>
@@ -1082,7 +1082,7 @@ function PaymentConfirmCard({ qr, fromWallet }: { qr: any; fromWallet?: string }
           onClick={handleSend}
           disabled={sending}
           className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
-          style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}
+          style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}
         >
           {sending ? <><Loader2 className="w-3 h-3 animate-spin" />Sending...</> : `Send ${qr.amount} ${qr.token}`}
         </button>
@@ -1130,13 +1130,13 @@ function CancelOrderCard({ order, userWallet, onCancelled }: { order: any; userW
     <div className="rounded-lg p-3 flex items-center justify-between" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
       <div className="text-xs" style={{ color: 'var(--foreground)' }}>
         <div className="font-semibold">{order.type?.replace('_', ' ').toUpperCase()} — {order.amountIn} {order.tokenIn} → {order.tokenOut}</div>
-        {order.triggerPrice && <div style={{ color: '#7B70FF' }}>Trigger: ${order.triggerPrice}</div>}
+        {order.triggerPrice && <div style={{ color: '#FFFFFF' }}>Trigger: ${order.triggerPrice}</div>}
       </div>
       <button
         onClick={handleCancel}
         disabled={cancelling}
         className="ml-3 px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 disabled:opacity-40"
-        style={{ backgroundColor: 'rgba(255,107,107,0.15)', color: '#FF6B6B' }}
+        style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#FFFFFF' }}
       >
         {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
         {cancelling ? 'Cancelling...' : 'Cancel Order'}

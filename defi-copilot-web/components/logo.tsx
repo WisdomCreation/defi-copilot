@@ -1,64 +1,37 @@
 export function CopilotLogo({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Solid purple circle background */}
-      <circle cx="100" cy="100" r="90" fill="#7C3AED"/>
-
-      {/* Upward trending line — DeFi chart motif */}
-      <polyline
-        points="40,140 75,100 105,115 160,60"
-        stroke="white"
-        strokeWidth="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.95"
-      />
-
-      {/* Arrow head at top right of line */}
-      <polyline
-        points="145,55 160,60 155,75"
-        stroke="white"
-        strokeWidth="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.95"
-      />
-
-      {/* Subtle orbit ring */}
-      <circle cx="100" cy="100" r="78" stroke="white" strokeWidth="2" fill="none" opacity="0.12"/>
+      {/* Black square background */}
+      <rect width="200" height="200" rx="40" fill="#111111"/>
+      {/* Top row: small circle + large circle */}
+      <circle cx="82" cy="42" r="14" fill="white"/>
+      <circle cx="145" cy="52" r="28" fill="white"/>
+      {/* Middle row: pill (left-open) + long pill */}
+      <rect x="38" y="72" width="68" height="26" rx="13" fill="white"/>
+      <rect x="82" y="100" width="82" height="26" rx="13" fill="white"/>
+      {/* Bottom row: 4 circles */}
+      <circle cx="38" cy="143" r="16" fill="white"/>
+      <circle cx="82" cy="155" r="16" fill="white"/>
+      <circle cx="127" cy="155" r="14" fill="white"/>
+      <circle cx="82" cy="185" r="12" fill="white" opacity="0.5"/>
+      <circle cx="38" cy="185" r="14" fill="white" opacity="0.7"/>
     </svg>
   )
 }
 
 export function CopilotLogoSmall({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Solid purple circle — no gradient IDs needed */}
-      <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
-
-      {/* Upward trending chart line */}
-      <polyline
-        points="20,70 37,50 53,57 80,30"
-        stroke="white"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.95"
-      />
-
-      {/* Arrow head */}
-      <polyline
-        points="72,27 80,30 77,38"
-        stroke="white"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity="0.95"
-      />
+    <svg width={size} height={size} viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="200" rx="40" fill="#111111"/>
+      <circle cx="82" cy="42" r="14" fill="white"/>
+      <circle cx="145" cy="52" r="28" fill="white"/>
+      <rect x="38" y="72" width="68" height="26" rx="13" fill="white"/>
+      <rect x="82" y="100" width="82" height="26" rx="13" fill="white"/>
+      <circle cx="38" cy="143" r="16" fill="white"/>
+      <circle cx="82" cy="155" r="16" fill="white"/>
+      <circle cx="127" cy="155" r="14" fill="white"/>
+      <circle cx="82" cy="185" r="12" fill="white" opacity="0.5"/>
+      <circle cx="38" cy="185" r="14" fill="white" opacity="0.7"/>
     </svg>
   )
 }
