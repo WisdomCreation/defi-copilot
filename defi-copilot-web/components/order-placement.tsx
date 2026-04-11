@@ -27,15 +27,15 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
   const getOrderTypeDisplay = () => {
     switch (intent.action) {
       case 'limit':
-        return { icon: TrendingUp, title: 'Limit Order', color: '#00C9A7' }
+        return { icon: TrendingUp, title: 'Limit Order', color: '#FFFFFF' }
       case 'stop_loss':
-        return { icon: TrendingDown, title: 'Stop-Loss Order', color: '#FF6B6B' }
+        return { icon: TrendingDown, title: 'Stop-Loss Order', color: '#FFFFFF' }
       case 'take_profit':
-        return { icon: TrendingUp, title: 'Take-Profit Order', color: '#00C9A7' }
+        return { icon: TrendingUp, title: 'Take-Profit Order', color: '#FFFFFF' }
       case 'dca':
-        return { icon: Repeat, title: 'DCA Order', color: '#7B70FF' }
+        return { icon: Repeat, title: 'DCA Order', color: '#CCCCCC' }
       default:
-        return { icon: Calendar, title: 'Scheduled Order', color: '#FFB347' }
+        return { icon: Calendar, title: 'Scheduled Order', color: '#AAAAAA' }
     }
   }
 
@@ -72,6 +72,10 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
       // e.g. sell 8 USDC, want SOL at $95 → takingAmount = 8/95 SOL = 0.0842 SOL
       const triggerPrice = parseFloat(intent.triggerPrice || '0')
       if (!triggerPrice) throw new Error('Trigger price is required')
+
+      // Jupiter requires minimum $5 USD order size
+      const estUsd = inputToken === 'SOL' ? amountValue * triggerPrice : amountValue
+      if (estUsd < 5) throw new Error(`Order size too small ($${estUsd.toFixed(2)}). Jupiter requires a minimum of $5 USD.`)
 
       let takingAmount: string
       if (inputToken === 'USDC' || inputToken === 'USDT') {
@@ -170,7 +174,7 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: `${orderType.color}15` }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
             >
               <Icon className="w-5 h-5" style={{ color: orderType.color }} />
             </div>
@@ -210,7 +214,7 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
           {intent.triggerPrice && (
             <div
               className="rounded-lg p-4"
-              style={{ backgroundColor: 'rgba(83,74,183,0.1)', border: '1px solid rgba(83,74,183,0.3)' }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm" style={{ color: '#999' }}>
@@ -222,7 +226,7 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
                   </div>
                 )}
               </div>
-              <div className="text-xl font-bold" style={{ color: '#7B70FF' }}>
+              <div className="text-xl font-bold" style={{ color: '#FFFFFF' }}>
                 ${intent.triggerPrice} {intent.triggerCondition}
               </div>
             </div>
@@ -232,12 +236,12 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
           {intent.dcaInterval && (
             <div
               className="rounded-lg p-4"
-              style={{ backgroundColor: 'rgba(0,201,167,0.1)', border: '1px solid rgba(0,201,167,0.3)' }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}
             >
               <div className="text-sm mb-1" style={{ color: '#999' }}>
                 Recurring
               </div>
-              <div className="text-lg font-semibold" style={{ color: '#00C9A7' }}>
+              <div className="text-lg font-semibold" style={{ color: '#CCCCCC' }}>
                 {intent.dcaInterval} × {intent.dcaCount} times
               </div>
             </div>
@@ -289,8 +293,8 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
             disabled={loading}
             className="flex-1 px-4 py-3 rounded-lg transition-colors font-medium text-sm"
             style={{
-              backgroundColor: loading ? '#666' : orderType.color,
-              color: '#000000',
+              backgroundColor: loading ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)',
+              color: '#FFFFFF',
               cursor: loading ? 'not-allowed' : 'pointer',
             }}
             onMouseOver={(e) => {

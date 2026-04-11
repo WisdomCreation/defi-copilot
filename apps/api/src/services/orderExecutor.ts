@@ -144,8 +144,9 @@ export class OrderExecutor {
       }
     );
 
-    // Jupiter Trigger V1 returns 'transaction' field
-    const txBase64 = data?.transaction ?? data?.tx;
+    // Jupiter may return 'transaction', 'tx', or 'transactions' (array)
+    const txBase64 = data?.transaction ?? data?.tx ?? (Array.isArray(data?.transactions) ? data.transactions[0] : null);
+    console.log('Jupiter cancel response keys:', Object.keys(data || {}));
     if (!txBase64) {
       throw new Error(`Jupiter did not return a cancel transaction. Response: ${JSON.stringify(data)}`);
     }
