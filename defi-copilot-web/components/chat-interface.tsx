@@ -259,7 +259,16 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
 
   // Direct payment preview — confirm + sign
   if (qr.type === 'payment_preview') {
-    return <PaymentConfirmCard qr={qr} fromWallet={userAddress || intent?.fromWallet} />
+    // Patch toAddress from resolved intent.recipient (contact name resolution happens client-side)
+    const resolvedQr = { ...qr }
+    if (userAddress && intent?.recipient) {
+      const resolved = resolveContact(userAddress, intent.recipient)
+      resolvedQr.toAddress = resolved
+      // toDisplay: if original was a name (not an address), show "hassan (3Y4R...)"
+      const isName = !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(intent.recipient) && !intent.recipient.endsWith('.sol')
+      resolvedQr.toDisplay = isName ? `${intent.recipient} (${resolved.slice(0, 8)}...)` : resolved
+    }
+    return <PaymentConfirmCard qr={resolvedQr} fromWallet={userAddress || intent?.fromWallet} />
   }
 
   // Batch / split payment
@@ -567,7 +576,7 @@ function PaymentConfirmCard({ qr, fromWallet }: { qr: any; fromWallet?: string }
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
       <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
         <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Send {qr.token}</span>
-        <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>~${qr.usdValue}</span>
+        <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>~${Math.abs(parseFloat(qr.usdValue || '0')).toFixed(2)}</span>
       </div>
       <div className="px-3 py-2 text-xs space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{qr.toDisplay}</span></div>
