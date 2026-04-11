@@ -2,25 +2,28 @@ import axios from 'axios';
 
 const COINGECKO = 'https://api.coingecko.com/api/v3';
 
-// ─── Houdini partner API client ──────────────────────────────────────────────
-const houdiniClient = axios.create({
-  baseURL: process.env.HOUDINI_API_BASE || 'https://api-partner.houdiniswap.com',
-  headers: {
-    Authorization: `${process.env.HOUDINI_API_KEY}:${process.env.HOUDINI_API_SECRET}`,
-    'Content-Type': 'application/json',
-  },
-  timeout: 15000,
-});
+// ─── Lazy API clients (created per-call to always use current env vars) ─────
+function getHoudiniClient() {
+  return axios.create({
+    baseURL: process.env.HOUDINI_API_BASE || 'https://api-partner.houdiniswap.com',
+    headers: {
+      Authorization: `${process.env.HOUDINI_API_KEY}:${process.env.HOUDINI_API_SECRET}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
+}
 
-// ─── GhostPay API client ─────────────────────────────────────────────────────
-const ghostPayClient = axios.create({
-  baseURL: process.env.GHOSTPAY_API_BASE || 'https://api2.ghostwareos.com/api',
-  headers: {
-    'X-API-Key': process.env.GHOSTPAY_API_KEY || '',
-    'Content-Type': 'application/json',
-  },
-  timeout: 15000,
-});
+function getGhostPayClient() {
+  return axios.create({
+    baseURL: process.env.GHOSTPAY_API_BASE || 'https://api2.ghostwareos.com/api',
+    headers: {
+      'X-API-Key': process.env.GHOSTPAY_API_KEY || '',
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
+}
 
 async function getSolPrice(): Promise<number> {
   try {
@@ -32,7 +35,7 @@ async function getSolPrice(): Promise<number> {
 // ─── Houdini quote via partner API ──────────────────────────────────────────
 async function getHoudiniQuote(tokenIn: string, tokenOut: string, amount: number): Promise<ProviderQuote> {
   try {
-    const { data } = await houdiniClient.get(`/quote?amount=${amount}&from=${tokenIn.toUpperCase()}&to=${tokenOut.toUpperCase()}&anonymous=true&useXmr=false`);
+    const { data } = await getHoudiniClient().get(`/quote?amount=${amount}&from=${tokenIn.toUpperCase()}&to=${tokenOut.toUpperCase()}&anonymous=true&useXmr=false`);
     return {
       provider: 'Houdini Swap',
       icon: '🌀',
@@ -146,7 +149,7 @@ export async function initiateGhostPaySend(params: {
   payerAddress: string;
   receiverAddress: string;
 }) {
-  const { data } = await ghostPayClient.post('/sends/initiate', {
+  const { data } = await getGhostPayClient().post('/sends/initiate', {
     from: params.fromToken.toUpperCase(),
     to: params.toToken.toUpperCase(),
     chain: 'SOL',
@@ -176,7 +179,7 @@ export async function initiateHoudiniSend(params: {
   amount: number;
   receiverAddress: string;
 }) {
-  const { data } = await houdiniClient.post('/exchange', {
+  const { data } = await getHoudiniClient().post('/exchange', {
     from: params.fromToken.toUpperCase(),
     to: params.toToken.toUpperCase(),
     addressTo: params.receiverAddress,
