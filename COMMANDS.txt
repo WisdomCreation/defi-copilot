@@ -50,7 +50,7 @@ show payments this month
 
 
 ── CONTACTS ───────────────────────────────────────────────────────────
-save this address as hassan: <address>
+save this address as hassan: 6Xsng11pysTydWHX2wzLWMbn8tc5toChWU1um2kpmGJd
 add contact alice <address>
 show my contacts
 lookup hassan
