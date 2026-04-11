@@ -39,9 +39,16 @@ CATEGORIES & COMMANDS:
 - "find stablecoin yield above 8%", "auto-compound my yield"
 
 5. PAYMENTS (payment)
-- "send 0.1 ETH to hassan.eth", "pay 50 USDC to 0x..."
-- "send money to Argentina in USDC", "split $300 between 3 wallets"
-- "set up recurring payment $100 monthly"
+- "send 0.1 SOL to wallet.sol" → payment, queryType: direct
+- "pay 50 USDC to 0x..." → payment, queryType: direct
+- "split $300 between 3 wallets" → payment, queryType: split
+- "send money to Argentina in USDC" → payment, queryType: crossborder
+- "set up recurring payment $100 monthly" → payment, queryType: recurring
+- "send anonymous payroll" → payment, queryType: private
+- "create payment request link for 50 USDC" → payment, queryType: request_link
+- "send ETH and auto-convert to USDC on arrival" → payment, queryType: swap_send
+- "bulk pay from CSV" → payment, queryType: bulk_csv
+- "what did I spend on payments this month?" → payment, queryType: spending_summary
 
 6. PRIVACY (privacy)
 - "send ETH anonymously", "swap privately", "do a ZK private swap"
@@ -94,8 +101,11 @@ Response format:
   "slippageTolerance": 0.5,
   "mevProtection": false,
   "leverage": null,
-  "queryType": "portfolio_value|balances|pnl|trades|gas|positions|price|sentiment|yield|trending|tax|nft|social",
+  "queryType": "portfolio_value|balances|pnl|trades|gas|positions|price|sentiment|yield|trending|tax|nft|social|direct|split|crossborder|recurring|request_link|swap_send|bulk_csv|spending_summary|private",
   "queryToken": null,
+  "recipient": null,
+  "recipients": null,
+  "memo": null,
   "clarificationNeeded": false,
   "clarificationQuestion": null
 }
@@ -125,6 +135,22 @@ Reply: Scanning DeFiLlama for the best USDC yields across all protocols.
 User: "what is my PnL this week?" / "show my last 10 trades"
 JSON: {"action":"portfolio_query","queryType":"pnl","chain":"solana"}
 Reply: Fetching your trading performance and recent transaction history.
+
+User: "send 0.5 SOL to abc123.sol" / "pay 50 USDC to 0xabc..."
+JSON: {"action":"payment","queryType":"direct","tokenIn":"SOL","amountIn":"0.5","recipient":"abc123.sol","chain":"solana"}
+Reply: Preparing to send 0.5 SOL — confirm below.
+
+User: "split $300 between wallet1 and wallet2 equally"
+JSON: {"action":"payment","queryType":"split","tokenIn":"USDC","amountIn":"300","recipients":["wallet1","wallet2"],"chain":"solana"}
+Reply: Splitting $300 USDC equally between 2 wallets — confirm below.
+
+User: "create payment request link for 50 USDC"
+JSON: {"action":"payment","queryType":"request_link","tokenIn":"USDC","amountIn":"50","chain":"solana"}
+Reply: Generating your Solana Pay link for 50 USDC.
+
+User: "what did I spend on payments this month?"
+JSON: {"action":"payment","queryType":"spending_summary","chain":"solana"}
+Reply: Pulling your outbound payment summary for this month.
 
 User: "cancel my order"
 JSON: {"action":"cancel_order","chain":"solana"}

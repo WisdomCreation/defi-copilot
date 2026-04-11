@@ -6,6 +6,7 @@ import { findOrCreateUser, findOrCreateConversation, addMessage } from '../db';
 import { prisma } from '../db/prisma';
 import { handlePortfolioQuery, handleMarketQuery, handleYieldQuery, handleTransactionHistory } from '../services/queryHandlers';
 import { handleTaxReport, handleCapitalGains, handleExportCSV, handleTaxLossHarvesting, handleProofOfFunds, handleOFACCheck } from '../services/taxHandlers';
+import { buildPaymentPreview, buildBatchPaymentPreview, buildPaymentLink, buildSpendingSummary } from '../services/paymentHandlers';
 import { 
   getJupiterQuote, 
   getTokenAddress, 
@@ -282,6 +283,63 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
         aiReply = queryResult.pools?.length
           ? `Found ${queryResult.pools.length} ${token} yield opportunities. Top APY: ${queryResult.pools[0]?.apy}% on ${queryResult.pools[0]?.protocol}.`
           : `No ${token} yield pools found above $500k TVL right now.`;
+      }
+
+      // ── Payment handler ──────────────────────────────────────────────────
+      if (intent?.action === 'payment') {
+        const qt = intent.queryType || 'direct';
+        let queryResult: any;
+
+        if (qt === 'spending_summary') {
+          queryResult = await buildSpendingSummary(walletAddress);
+          aiReply = queryResult.error
+            ? `Couldn't fetch spending data. (${queryResult.error})`
+            : `You sent ${queryResult.transferCount} payments totalling ~$${queryResult.totalUsd} this ${queryResult.month}.`;
+
+        } else if (qt === 'request_link') {
+          queryResult = buildPaymentLink({
+            toWallet: walletAddress,
+            token: intent.tokenIn || 'USDC',
+            amount: parseFloat(intent.amountIn || intent.amountUsd || '0'),
+            memo: intent.memo,
+          });
+          aiReply = `Your payment request link for ${queryResult.amount} ${queryResult.token} is ready — share it with anyone.`;
+
+        } else if (qt === 'split' && intent.recipients?.length) {
+          queryResult = await buildBatchPaymentPreview({
+            fromWallet: walletAddress,
+            recipients: intent.recipients.map((r: string) => ({ address: r, amount: 0 })),
+            token: intent.tokenIn || 'USDC',
+            splitEqually: true,
+            totalAmount: parseFloat(intent.amountIn || intent.amountUsd || '0'),
+          });
+          aiReply = `Ready to split ${queryResult.total} ${queryResult.token} across ${queryResult.recipients.length} wallets. Review and sign below.`;
+
+        } else if (qt === 'direct' || qt === 'crossborder' || qt === 'swap_send' || qt === 'private') {
+          const recipient = intent.recipient || '';
+          const token = intent.tokenIn || 'SOL';
+          const amount = parseFloat(intent.amountIn || intent.amountUsd || '0');
+          if (!recipient || amount <= 0) {
+            aiReply = 'Please specify a recipient address and amount, e.g. "send 0.5 SOL to abc.sol"';
+          } else {
+            queryResult = await buildPaymentPreview({ fromWallet: walletAddress, recipient, token, amount, memo: intent.memo });
+            aiReply = `Ready to send ${amount} ${token.toUpperCase()} to ${queryResult.toDisplay}. Review and sign below.`;
+          }
+
+        } else if (qt === 'recurring') {
+          queryResult = {
+            type: 'payment_info',
+            message: 'Recurring payments require Gelato integration. You can set up an automated transfer of ' +
+              `${intent.amountIn || intent.amountUsd || '?'} ${intent.tokenIn || 'USDC'} ${intent.dcaInterval || 'monthly'} ` +
+              'via Gelato Network — this feature is on our roadmap.',
+          };
+          aiReply = 'Recurring payments via Gelato are coming soon. For now I can help you with one-time sends.';
+
+        } else {
+          aiReply = 'Please specify payment details — who to send to, how much, and which token.';
+        }
+
+        if (queryResult) enrichedIntent = { ...intent, queryResult };
       }
 
       // ── Tax query handler ────────────────────────────────────────────────

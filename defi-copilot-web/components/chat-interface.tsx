@@ -6,7 +6,7 @@ import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
 import { CopilotLogo } from './logo'
 
-function QueryResultCard({ intent }: { intent: any }) {
+function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: string }) {
   const qr = intent?.queryResult
   if (!qr) return null
 
@@ -254,6 +254,99 @@ function QueryResultCard({ intent }: { intent: any }) {
     )
   }
 
+  // ── Payment cards ────────────────────────────────────────────────────────
+
+  // Direct payment preview — confirm + sign
+  if (qr.type === 'payment_preview') {
+    return <PaymentConfirmCard qr={qr} fromWallet={userAddress || intent?.fromWallet} />
+  }
+
+  // Batch / split payment
+  if (qr.type === 'batch_payment_preview') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Batch Payment — {qr.token}</span>
+          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>Total: {qr.total} {qr.token}</span>
+        </div>
+        {qr.recipients?.map((r: any, i: number) => (
+          <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--foreground)' }}>{r.displayName || r.address?.slice(0,16)}...</span>
+            <span style={{ color: '#00C9A7' }}>{r.amount} {qr.token}</span>
+          </div>
+        ))}
+        <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>
+          Connect wallet and approve each transaction in Phantom to send.
+        </div>
+      </div>
+    )
+  }
+
+  // Payment request link
+  if (qr.type === 'payment_link') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Payment Request — {qr.amount} {qr.token}</span>
+        </div>
+        <div className="px-3 py-2 space-y-2">
+          <div className="text-xs break-all p-2 rounded" style={{ backgroundColor: 'rgba(123,112,255,0.08)', color: '#7B70FF', fontFamily: 'monospace' }}>
+            {qr.webUrl}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigator.clipboard.writeText(qr.webUrl)}
+              className="flex-1 py-1.5 rounded text-xs font-medium"
+              style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}
+            >
+              Copy Link
+            </button>
+            <button
+              onClick={() => navigator.clipboard.writeText(qr.solanaPayUrl)}
+              className="flex-1 py-1.5 rounded text-xs font-medium"
+              style={{ backgroundColor: 'rgba(0,201,167,0.1)', color: '#00C9A7' }}
+            >
+              Copy Solana Pay URL
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Spending summary
+  if (qr.type === 'spending_summary') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Payments — {qr.month}</span>
+          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>${qr.totalUsd} sent</span>
+        </div>
+        <div className="px-3 py-2 grid grid-cols-3 gap-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="text-center"><div className="font-bold" style={{ color: 'var(--foreground)' }}>{qr.transferCount}</div><div style={{ color: '#999' }}>Transfers</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#FF6B6B' }}>{qr.totalSolOut} SOL</div><div style={{ color: '#999' }}>SOL Sent</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#00C9A7' }}>${qr.totalUsdcOut}</div><div style={{ color: '#999' }}>USDC Sent</div></div>
+        </div>
+        {qr.transfers?.map((t: any, i: number) => (
+          <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+            <div><span style={{ color: 'var(--foreground)' }}>To {t.to}</span><span className="ml-2" style={{ color: '#999' }}>{t.date}</span></div>
+            <span style={{ color: '#FFB347' }}>{t.amount?.toFixed ? t.amount.toFixed(4) : t.amount} {t.token}</span>
+          </div>
+        ))}
+        {(!qr.transfers?.length) && <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>No outbound payments this month.</div>}
+      </div>
+    )
+  }
+
+  // Generic payment info
+  if (qr.type === 'payment_info') {
+    return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>
+        {qr.message}
+      </div>
+    )
+  }
+
   // OFAC check
   if (qr.type === 'ofac_check') {
     return (
@@ -274,6 +367,91 @@ function QueryResultCard({ intent }: { intent: any }) {
   }
 
   return null
+}
+
+function PaymentConfirmCard({ qr, fromWallet }: { qr: any; fromWallet?: string }) {
+  const [sending, setSending] = useState(false)
+  const [done, setDone] = useState<string | null>(null)
+
+  const handleSend = async () => {
+    const wallet = fromWallet || qr.fromWallet
+    if (!wallet) return alert('Wallet not connected')
+    setSending(true)
+    try {
+      const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
+      const phantom = (window as any).phantom?.solana
+      if (!phantom) throw new Error('Phantom wallet not found')
+      if (!phantom.isConnected) await phantom.connect()
+
+      const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com')
+      const from = new PublicKey(wallet)
+      const to = new PublicKey(qr.toAddress)
+      const { blockhash } = await connection.getLatestBlockhash()
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: from })
+
+      if (qr.token === 'SOL') {
+        tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: Math.round(qr.amount * LAMPORTS_PER_SOL) }))
+      } else if (qr.mint) {
+        // SPL token transfer — use Token class from @solana/spl-token v1
+        const splToken = await import('@solana/spl-token')
+        const TOKEN_PROGRAM_ID = splToken.TOKEN_PROGRAM_ID
+        const mintPk = new PublicKey(qr.mint)
+        const fromATA = await (splToken as any).Token.getAssociatedTokenAddress
+          ? (splToken as any).Token.getAssociatedTokenAddress(splToken.ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, mintPk, from)
+          : (splToken as any).getAssociatedTokenAddress(mintPk, from)
+        const toATA = await ((splToken as any).Token?.getAssociatedTokenAddress
+          ? (splToken as any).Token.getAssociatedTokenAddress(splToken.ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, mintPk, to)
+          : (splToken as any).getAssociatedTokenAddress(mintPk, to))
+        const rawAmount = Math.round(qr.amount * Math.pow(10, qr.decimals || 6))
+        const transferIx = (splToken as any).Token?.createTransferInstruction
+          ? (splToken as any).Token.createTransferInstruction(TOKEN_PROGRAM_ID, fromATA, toATA, from, [], rawAmount)
+          : (splToken as any).createTransferInstruction(fromATA, toATA, from, rawAmount)
+        tx.add(transferIx)
+      }
+
+      const signed = await phantom.signTransaction(tx)
+      const sig = await connection.sendRawTransaction(signed.serialize())
+      setDone(sig)
+    } catch (e: any) {
+      alert(`Send failed: ${e.message}`)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
+        <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Payment sent!</div>
+        <a href={`https://solscan.io/tx/${done}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+        <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Send {qr.token}</span>
+        <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>~${qr.usdValue}</span>
+      </div>
+      <div className="px-3 py-2 text-xs space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{qr.toDisplay}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Amount</span><span style={{ color: 'var(--foreground)' }}>{qr.amount} {qr.token}</span></div>
+        {qr.memo && <div className="flex justify-between"><span style={{ color: '#999' }}>Memo</span><span style={{ color: 'var(--foreground)' }}>{qr.memo}</span></div>}
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Network</span><span style={{ color: 'var(--foreground)' }}>Solana</span></div>
+      </div>
+      <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+        <button
+          onClick={handleSend}
+          disabled={sending}
+          className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+          style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}
+        >
+          {sending ? <><Loader2 className="w-3 h-3 animate-spin" />Sending...</> : `Send ${qr.amount} ${qr.token}`}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function CancelOrderCard({ order, userWallet, onCancelled }: { order: any; userWallet?: string; onCancelled: (id: string) => void }) {
@@ -830,7 +1008,7 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
                 {message.content}
                 {/* Query result cards (portfolio, market, yield) */}
                 {message.role === 'assistant' && message.intent?.queryResult && (
-                  <QueryResultCard intent={message.intent} />
+                  <QueryResultCard intent={message.intent} userAddress={address} />
                 )}
                 {/* Cancel order cards */}
                 {message.cancelOrders && message.cancelOrders.length > 0 && (
