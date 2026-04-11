@@ -4,6 +4,7 @@ import { parseIntent } from '../services/ai';
 import type { CopilotResponse } from '@defi-copilot/shared';
 import { findOrCreateUser, findOrCreateConversation, addMessage } from '../db';
 import { prisma } from '../db/prisma';
+import { handlePortfolioQuery, handleMarketQuery, handleYieldQuery, handleTransactionHistory } from '../services/queryHandlers';
 import { 
   getJupiterQuote, 
   getTokenAddress, 
@@ -249,6 +250,37 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
           console.error('Failed to get swap quote:', error);
           // Continue without quote data
         }
+      }
+
+      // ── Query handlers: portfolio, market, yield ────────────────────────
+      if (intent?.action === 'portfolio_query') {
+        const qt = intent.queryType || 'portfolio_value';
+        let queryResult: any;
+        if (qt === 'pnl' || qt === 'trades') {
+          queryResult = await handleTransactionHistory(walletAddress);
+        } else {
+          queryResult = await handlePortfolioQuery(walletAddress, qt);
+        }
+        enrichedIntent = { ...intent, queryResult };
+        if (queryResult.error) {
+          aiReply = `I fetched your portfolio data. ${queryResult.error ? `(Note: ${queryResult.error})` : ''}`;
+        }
+      }
+
+      if (intent?.action === 'market_query') {
+        const qt = intent.queryType || 'price';
+        const token = intent.queryToken;
+        const queryResult = await handleMarketQuery(qt, token);
+        enrichedIntent = { ...intent, queryResult };
+      }
+
+      if (intent?.action === 'yield_query') {
+        const token = intent.queryToken || intent.tokenIn || 'USDC';
+        const queryResult = await handleYieldQuery(token);
+        enrichedIntent = { ...intent, queryResult };
+        aiReply = queryResult.pools?.length
+          ? `Found ${queryResult.pools.length} ${token} yield opportunities. Top APY: ${queryResult.pools[0]?.apy}% on ${queryResult.pools[0]?.protocol}.`
+          : `No ${token} yield pools found above $500k TVL right now.`;
       }
 
       // Handle cancel_order: fetch active orders from DB and attach to intent

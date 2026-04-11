@@ -6,6 +6,143 @@ import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
 import { CopilotLogo } from './logo'
 
+function QueryResultCard({ intent }: { intent: any }) {
+  const qr = intent?.queryResult
+  if (!qr) return null
+
+  // Portfolio
+  if (qr.type === 'portfolio') {
+    if (!qr.holdings?.length) return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>
+        No token balances found in this wallet.
+      </div>
+    )
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Portfolio</span>
+          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>${qr.totalUsd?.toFixed(2)}</span>
+        </div>
+        {qr.holdings.map((h: any, i: number) => (
+          <div key={i} className="px-3 py-2 flex justify-between items-center text-xs" style={{ borderTop: '1px solid var(--border)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+            <div>
+              <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{h.symbol}</span>
+              <span className="ml-2" style={{ color: '#999' }}>{h.amount?.toFixed(4)}</span>
+            </div>
+            <div className="text-right">
+              <div style={{ color: 'var(--foreground)' }}>${h.usdValue?.toFixed(2)}</div>
+              {h.change24h !== 0 && (
+                <div style={{ color: h.change24h >= 0 ? '#00C9A7' : '#FF6B6B' }}>
+                  {h.change24h >= 0 ? '+' : ''}{h.change24h?.toFixed(2)}%
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Market
+  if (qr.type === 'market') {
+    return (
+      <div className="mt-3 space-y-2">
+        {qr.fearGreed && (
+          <div className="p-3 rounded-lg flex items-center justify-between text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+            <span style={{ color: '#999' }}>Fear & Greed Index</span>
+            <span className="font-bold" style={{ color: parseInt(qr.fearGreed.value) > 60 ? '#00C9A7' : parseInt(qr.fearGreed.value) < 40 ? '#FF6B6B' : '#FFB347' }}>
+              {qr.fearGreed.value} — {qr.fearGreed.label}
+            </span>
+          </div>
+        )}
+        {qr.prices?.map((p: any, i: number) => (
+          <div key={i} className="p-3 rounded-lg flex items-center justify-between text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-2">
+              {p.image && <img src={p.image} className="w-5 h-5 rounded-full" alt={p.symbol} />}
+              <div>
+                <div className="font-semibold" style={{ color: 'var(--foreground)' }}>{p.symbol?.toUpperCase()}</div>
+                <div style={{ color: '#999' }}>{p.name}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-bold" style={{ color: 'var(--foreground)' }}>${p.current_price?.toLocaleString()}</div>
+              <div style={{ color: p.price_change_percentage_24h >= 0 ? '#00C9A7' : '#FF6B6B' }}>
+                {p.price_change_percentage_24h >= 0 ? '+' : ''}{p.price_change_percentage_24h?.toFixed(2)}%
+              </div>
+            </div>
+          </div>
+        ))}
+        {qr.trending?.length > 0 && (
+          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+            <div className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>🔥 Trending</div>
+            {qr.trending.map((t: any, i: number) => (
+              <div key={i} className="px-3 py-2 flex justify-between items-center text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2">
+                  {t.thumb && <img src={t.thumb} className="w-4 h-4 rounded-full" alt={t.symbol} />}
+                  <span style={{ color: 'var(--foreground)' }}>{t.name}</span>
+                  <span style={{ color: '#999' }}>{t.symbol?.toUpperCase()}</span>
+                </div>
+                {t.rank && <span style={{ color: '#7B70FF' }}>#{t.rank}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Yield
+  if (qr.type === 'yield') {
+    if (!qr.pools?.length) return null
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
+          Best {qr.token} Yields
+        </div>
+        {qr.pools.map((p: any, i: number) => (
+          <div key={i} className="px-3 py-2 flex items-center justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+            <div>
+              <span className="font-semibold capitalize" style={{ color: 'var(--foreground)' }}>{p.protocol}</span>
+              <span className="ml-2" style={{ color: '#999' }}>{p.chain} · {p.symbol}</span>
+            </div>
+            <div className="text-right">
+              <div className="font-bold" style={{ color: '#00C9A7' }}>{p.apy}% APY</div>
+              <div style={{ color: p.risk === 'high' ? '#FF6B6B' : p.risk === 'medium' ? '#FFB347' : '#00C9A7' }}>
+                {p.risk} risk · ${(p.tvl / 1e6).toFixed(1)}M TVL
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Transactions
+  if (qr.type === 'transactions') {
+    if (!qr.txs?.length) return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>
+        No recent swap transactions found.
+      </div>
+    )
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>Recent Transactions</div>
+        {qr.txs.map((tx: any, i: number) => (
+          <div key={i} className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="flex justify-between">
+              <span style={{ color: 'var(--foreground)' }}>{tx.description || tx.type}</span>
+              <a href={`https://solscan.io/tx/${tx.signature}`} target="_blank" rel="noreferrer" className="text-xs" style={{ color: '#7B70FF' }}>View</a>
+            </div>
+            <div style={{ color: '#999' }}>{tx.timestamp ? new Date(tx.timestamp * 1000).toLocaleDateString() : ''}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return null
+}
+
 function CancelOrderCard({ order, userWallet, onCancelled }: { order: any; userWallet?: string; onCancelled: (id: string) => void }) {
   const [cancelling, setCancelling] = useState(false)
 
@@ -558,6 +695,10 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
                 }}
               >
                 {message.content}
+                {/* Query result cards (portfolio, market, yield) */}
+                {message.role === 'assistant' && message.intent?.queryResult && (
+                  <QueryResultCard intent={message.intent} />
+                )}
                 {/* Cancel order cards */}
                 {message.cancelOrders && message.cancelOrders.length > 0 && (
                   <div className="mt-3 space-y-2">
