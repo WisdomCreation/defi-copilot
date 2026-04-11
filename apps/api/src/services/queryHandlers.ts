@@ -141,22 +141,26 @@ export async function handleYieldQuery(queryToken?: string) {
 // ─── Recent transactions handler ────────────────────────────────────────────
 export async function handleTransactionHistory(walletAddress: string) {
   try {
-    const { data } = await axios.post(
-      `https://api.helius.xyz/v0/addresses/${walletAddress}/transactions?api-key=${HELIUS_API_KEY}&limit=10&type=SWAP`,
-      {},
-      { timeout: 10000 }
+    // Helius enhanced transactions API - GET request
+    const { data } = await axios.get(
+      `https://api.helius.xyz/v0/addresses/${walletAddress}/transactions`,
+      {
+        params: { 'api-key': HELIUS_API_KEY, limit: 10 },
+        timeout: 10000,
+      }
     );
 
-    const txs = (data || []).slice(0, 10).map((tx: any) => ({
+    const txs = (Array.isArray(data) ? data : []).slice(0, 10).map((tx: any) => ({
       signature: tx.signature,
       timestamp: tx.timestamp,
-      type: tx.type,
-      description: tx.description,
+      type: tx.type || 'TRANSACTION',
+      description: tx.description || tx.type || 'Transaction',
       fee: (tx.fee || 0) / 1e9,
     }));
 
     return { type: 'transactions', txs };
   } catch (err: any) {
+    console.error('Transaction history error:', err.response?.status, err.message);
     return { type: 'transactions', txs: [], error: err.message };
   }
 }
