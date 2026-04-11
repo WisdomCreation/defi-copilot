@@ -100,16 +100,6 @@ export class OrderExecutor {
         return;
       }
 
-      // CRITICAL FIX: Add grace period to prevent immediate execution
-      // Don't execute orders created within last 60 seconds
-      const orderAge = Date.now() - new Date(order.createdAt).getTime();
-      const GRACE_PERIOD_MS = 60 * 1000; // 60 seconds
-      
-      if (orderAge < GRACE_PERIOD_MS) {
-        console.log(`⏳ Order ${order.id} in grace period (${Math.round(orderAge / 1000)}s old), skipping check`);
-        return;
-      }
-
       // Get current price
       const symbol = `${order.tokenOut}/USD`;
       const currentPrice = await priceMonitor.getPrice(symbol);
@@ -124,10 +114,19 @@ export class OrderExecutor {
           `🎯 Order ${order.id} triggered! ${symbol} ${currentPrice} ${order.triggerCondition} ${targetPrice}`
         );
 
-        // Add to queue for execution
-        await orderQueue.add('execute-order', {
-          orderId: order.id,
-        });
+        if (order.signedTx) {
+          // Legacy pre-signed tx path - add to queue
+          await orderQueue.add('execute-order', {
+            orderId: order.id,
+          });
+        } else {
+          // New path: mark order as triggered, user needs to sign fresh transaction
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { status: 'triggered' },
+          });
+          console.log(`✅ Order ${order.id} marked as triggered - awaiting fresh user signature`);
+        }
       }
     } catch (error) {
       console.error(`Error checking order ${order.id}:`, error);
@@ -186,58 +185,58 @@ export class OrderExecutor {
   }
 
   /**
-   * Execute a swap order (limit/stop-loss/take-profit)
+   * Execute a swap order (limit/stop-loss/take-profit) using pre-signed tx
+   * Only used for legacy orders that have signedTx stored
    */
   private async executeSwapOrder(order: any) {
     console.log(`🔄 Executing swap order ${order.id}...`);
 
     if (!order.signedTx) {
-      throw new Error('No signed transaction found');
+      // No pre-signed tx - mark as triggered for user to sign
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'triggered' },
+      });
+      console.log(`✅ Order ${order.id} marked as triggered - awaiting fresh user signature`);
+      return;
     }
 
-    // Deserialize the pre-signed transaction
-    const txBuffer = Buffer.from(order.signedTx, 'base64');
-    const transaction = VersionedTransaction.deserialize(txBuffer);
+    try {
+      // Deserialize the pre-signed transaction
+      const txBuffer = Buffer.from(order.signedTx, 'base64');
+      const transaction = VersionedTransaction.deserialize(txBuffer);
 
-    // Broadcast to blockchain
-    const signature = await this.solanaConnection.sendRawTransaction(
-      transaction.serialize()
-    );
+      // Broadcast to blockchain
+      const signature = await this.solanaConnection.sendRawTransaction(
+        transaction.serialize()
+      );
 
-    console.log(`📡 Transaction broadcasted: ${signature}`);
+      console.log(`📡 Transaction broadcasted: ${signature}`);
 
-    // Wait for confirmation
-    await this.solanaConnection.confirmTransaction(signature, 'confirmed');
+      // Wait for confirmation
+      await this.solanaConnection.confirmTransaction(signature, 'confirmed');
 
-    console.log(`✅ Transaction confirmed: ${signature}`);
+      console.log(`✅ Transaction confirmed: ${signature}`);
 
-    // Update order status
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: 'filled',
-        txHash: signature,
-        filledAt: new Date(),
-      },
-    });
+      // Update order status
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'filled',
+          txHash: signature,
+          filledAt: new Date(),
+        },
+      });
 
-    // Create transaction record
-    await prisma.transaction.create({
-      data: {
-        orderId: order.id,
-        walletAddress: order.userId, // Should be wallet address
-        chain: order.chain,
-        txHash: signature,
-        type: order.type,
-        tokenIn: order.tokenIn,
-        tokenOut: order.tokenOut,
-        amountIn: order.amountIn,
-        status: 'confirmed',
-        confirmedAt: new Date(),
-      },
-    });
-
-    console.log(`✅ Order ${order.id} executed successfully!`);
+      console.log(`✅ Order ${order.id} executed successfully!`);
+    } catch (err: any) {
+      // Pre-signed tx likely expired - mark as triggered so user can sign fresh
+      console.error(`Pre-signed tx failed for order ${order.id}: ${err.message}`);
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'triggered' },
+      });
+    }
   }
 
   /**

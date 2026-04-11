@@ -23,31 +23,44 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   const [jupiterQuote, setJupiterQuote] = useState<any>(null)
   const [conversationId, setConversationId] = useState<string | undefined>()
   const [currentPrice, setCurrentPrice] = useState<number | undefined>()
+  // Each mount gets a unique session key so New Chat starts fresh
+  const [sessionKey] = useState(() => `session_${Date.now()}`)
 
-  // Load chat history from localStorage on mount
+  // Load the most recent session messages on mount (only if no prior session)
   useEffect(() => {
     if (address) {
-      const savedMessages = localStorage.getItem(`chat_history_${address}`)
-      if (savedMessages) {
-        try {
-          setMessages(JSON.parse(savedMessages))
-        } catch (error) {
-          console.error('Failed to load chat history:', error)
+      const lastSession = localStorage.getItem(`last_session_${address}`)
+      if (lastSession) {
+        const savedMessages = localStorage.getItem(`chat_${address}_${lastSession}`)
+        if (savedMessages) {
+          try {
+            setMessages(JSON.parse(savedMessages))
+          } catch {}
         }
       }
     }
   }, [address])
 
-  // Save chat history to localStorage whenever messages change
+  // Auto-save messages to this session's key
   useEffect(() => {
     if (address && messages.length > 0) {
       try {
-        localStorage.setItem(`chat_history_${address}`, JSON.stringify(messages))
-      } catch (error) {
-        console.error('Failed to save chat history:', error)
-      }
+        localStorage.setItem(`chat_${address}_${sessionKey}`, JSON.stringify(messages))
+        localStorage.setItem(`last_session_${address}`, sessionKey)
+        // Update conversations list for sidebar Recents
+        const firstUserMsg = messages.find(m => m.role === 'user')
+        if (firstUserMsg) {
+          const convKey = `conversations_${address}`
+          const existing = JSON.parse(localStorage.getItem(convKey) || '[]')
+          const updated = [
+            { id: sessionKey, title: firstUserMsg.content.slice(0, 40), lastMessage: messages[messages.length - 1]?.content?.slice(0, 60) || '', timestamp: new Date().toISOString() },
+            ...existing.filter((c: any) => c.id !== sessionKey),
+          ].slice(0, 20) // keep max 20 conversations
+          localStorage.setItem(convKey, JSON.stringify(updated))
+        }
+      } catch {}
     }
-  }, [messages, address])
+  }, [messages, address, sessionKey])
 
   const fetchSwapQuote = async (intent: any) => {
     try {

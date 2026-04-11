@@ -50,77 +50,14 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
         throw new Error('Phantom wallet not found')
       }
 
-      // Import Jupiter API
-      const { createJupiterApiClient } = await import('@jup-ag/api')
-      const jupiterApi = createJupiterApiClient()
-
-      const TOKEN_MINTS: Record<string, string> = {
-        SOL: 'So11111111111111111111111111111111111111112',
-        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-        USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      if (!phantom.isConnected) {
+        await phantom.connect()
       }
 
-      const inputMint = TOKEN_MINTS[intent.tokenIn?.toUpperCase() || 'USDC']
-      const outputMint = TOKEN_MINTS[intent.tokenOut?.toUpperCase() || 'SOL']
-      
-      // Get correct decimals for input token
-      const inputToken = intent.tokenIn?.toUpperCase() || 'USDC'
-      const decimals = inputToken === 'SOL' ? 9 : 6 // SOL=9, USDC/USDT=6
-      const amountValue = parseFloat(intent.amountIn || intent.amountUsd || '0')
-      const amount = Math.floor(amountValue * Math.pow(10, decimals))
-
-      console.log('Building order transaction...', { 
-        inputMint, 
-        outputMint, 
-        amount, 
-        amountValue,
-        decimals,
-        inputToken
-      })
-
-      // Get Jupiter quote
-      const quote = await jupiterApi.quoteGet({
-        inputMint,
-        outputMint,
-        amount,
-        slippageBps: 50,
-      })
-
-      if (!quote) {
-        throw new Error('No route found')
-      }
-
-      // Build transaction
-      const swapResult = await jupiterApi.swapPost({
-        swapRequest: {
-          quoteResponse: quote,
-          userPublicKey: phantom.publicKey.toString(),
-          wrapAndUnwrapSol: true,
-          dynamicComputeUnitLimit: true,
-          prioritizationFeeLamports: {
-            priorityLevelWithMaxLamports: {
-              maxLamports: 10000000,
-              priorityLevel: 'high',
-            },
-          },
-        },
-      })
-
-      const swapTransaction = swapResult.swapTransaction
-
-      // Deserialize transaction
-      const { VersionedTransaction } = await import('@solana/web3.js')
-      const swapTransactionBuf = Buffer.from(swapTransaction, 'base64')
-      const transaction = VersionedTransaction.deserialize(swapTransactionBuf)
-
-      console.log('🔐 Requesting signature for order...')
-
-      // User signs the transaction NOW
-      const signedTx = await phantom.signTransaction(transaction)
-
-      console.log('✅ Transaction signed!')
-
-      // Send signed transaction to backend for storage
+      // For limit/stop_loss/take_profit/dca orders:
+      // We do NOT pre-sign a transaction. Jupiter quotes expire in seconds.
+      // Instead, we just store the order intent. When the price triggers,
+      // the backend will notify the user to sign a fresh transaction.
       const orderData = {
         userWallet: phantom.publicKey.toString(),
         type: intent.action,
@@ -130,11 +67,12 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
         triggerPrice: intent.triggerPrice,
         triggerCondition: intent.triggerCondition,
         chain: intent.chain || 'solana',
-        signedTx: Buffer.from(signedTx.serialize()).toString('base64'),
+        signedTx: null, // No pre-signed tx - will execute fresh when triggered
         dcaInterval: intent.dcaInterval,
         dcaMaxExecutions: intent.dcaCount,
       }
 
+      console.log('📝 Creating order intent (no pre-signing):', orderData)
       onConfirm(orderData)
     } catch (error: any) {
       console.error('Order creation error:', error)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { MessageSquare, FileText, Code } from 'lucide-react'
 import { WalletConnect } from '@/components/wallet-connect'
@@ -11,16 +11,39 @@ import { OrderDashboard } from '@/components/order-dashboard'
 export default function Home() {
   const { address, chain } = useAccount()
   const [currentSection, setCurrentSection] = useState('chats')
-  const [chatKey, setChatKey] = useState(0) // Force re-render of chat interface
+  const [chatKey, setChatKey] = useState(0)
+  const [solanaAddress, setSolanaAddress] = useState<string | undefined>()
   
   const chainName = chain?.name.toLowerCase() || 'ethereum'
 
-  const handleNewChat = () => {
-    if (address) {
-      // Just start a fresh chat by re-mounting the component
-      // The chat interface will auto-save the current conversation
-      setChatKey(prev => prev + 1)
+  // Get Phantom Solana wallet address
+  useEffect(() => {
+    const getPhantomAddress = async () => {
+      const phantom = (window as any).phantom?.solana
+      if (phantom) {
+        try {
+          if (!phantom.isConnected) {
+            await phantom.connect({ onlyIfTrusted: true })
+          }
+          if (phantom.publicKey) {
+            setSolanaAddress(phantom.publicKey.toString())
+          }
+        } catch {
+          // Not connected yet, that's ok
+        }
+      }
     }
+    getPhantomAddress()
+    // Listen for Phantom connect events
+    const phantom = (window as any).phantom?.solana
+    if (phantom) {
+      phantom.on?.('connect', (publicKey: any) => setSolanaAddress(publicKey.toString()))
+      phantom.on?.('disconnect', () => setSolanaAddress(undefined))
+    }
+  }, [])
+
+  const handleNewChat = () => {
+    setChatKey(prev => prev + 1)
   }
 
   return (
@@ -49,10 +72,10 @@ export default function Home() {
         
         {currentSection === 'trades' && (
           <div className="flex-1 flex items-center justify-center p-8">
-            {address ? (
+            {solanaAddress ? (
               <div className="w-full max-w-6xl">
                 <OrderDashboard
-                  userWallet={address}
+                  userWallet={solanaAddress}
                   onClose={() => setCurrentSection('chats')}
                   embedded={true}
                 />
@@ -60,7 +83,7 @@ export default function Home() {
             ) : (
               <div className="text-center" style={{ color: '#999' }}>
                 <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Trades</h2>
-                <p>Connect your wallet to view and manage trades</p>
+                <p>Connect your Phantom wallet to view and manage trades</p>
               </div>
             )}
           </div>

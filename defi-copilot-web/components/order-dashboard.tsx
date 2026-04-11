@@ -110,6 +110,7 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
   const getStatusBadge = (status: string) => {
     const styles: Record<string, { bg: string; color: string; icon: any }> = {
       watching: { bg: 'rgba(255,179,71,0.15)', color: '#FFB347', icon: Clock },
+      triggered: { bg: 'rgba(123,112,255,0.15)', color: '#7B70FF', icon: TrendingUp },
       filled: { bg: 'rgba(0,201,167,0.15)', color: '#00C9A7', icon: CheckCircle },
       cancelled: { bg: 'rgba(139,143,173,0.15)', color: '#8B8FAD', icon: XCircle },
       failed: { bg: 'rgba(255,107,107,0.15)', color: '#FF6B6B', icon: XCircle },
@@ -129,14 +130,24 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
     )
   }
 
+  const containerClass = embedded
+    ? 'w-full h-full flex flex-col'
+    : 'fixed inset-0 flex items-center justify-center z-50 p-4'
+
+  const innerClass = embedded
+    ? 'rounded-xl p-6 w-full h-full overflow-hidden flex flex-col'
+    : 'rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col'
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) => embedded ? (
+    <div className={containerClass}>{children}</div>
+  ) : (
+    <div className={containerClass} style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>{children}</div>
+  )
+
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-      onClick={onClose}
-    >
+    <Wrapper>
       <div
-        className="rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className={innerClass}
         style={{ backgroundColor: 'var(--sidebar)', border: '1px solid var(--border)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -287,6 +298,6 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
           )}
         </div>
       </div>
-    </div>
+    </Wrapper>
   )
 }

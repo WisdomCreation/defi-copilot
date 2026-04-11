@@ -12,7 +12,7 @@ const CreateOrderSchema = z.object({
   triggerPrice: z.string().optional(),
   triggerCondition: z.enum(['above', 'below']).optional(),
   chain: z.string(),
-  signedTx: z.string(),
+  signedTx: z.string().nullable().optional(),
   dcaInterval: z.enum(['daily', 'weekly', 'monthly']).optional(),
   dcaMaxExecutions: z.number().optional(),
   executeAt: z.string().optional(), // ISO datetime for scheduled orders
