@@ -73,7 +73,10 @@ export class OrderExecutor {
 
     for (const [wallet, orders] of byWallet) {
       try {
-        const openKeys = await this.fetchJupiterOpenOrderKeys(wallet);
+        const { keys: openKeys, success } = await this.fetchJupiterOpenOrderKeys(wallet);
+
+        // If the API call failed, skip — never mark orders as filled on API error
+        if (!success) continue;
 
         for (const order of orders) {
           if (order.jupiterOrderKey && !openKeys.has(order.jupiterOrderKey)) {
@@ -99,7 +102,7 @@ export class OrderExecutor {
    */
   private async fetchJupiterOpenOrderKeys(
     walletAddress: string
-  ): Promise<Set<string>> {
+  ): Promise<{ keys: Set<string>; success: boolean }> {
     try {
       const { data } = await axios.get(`${JUPITER_API}/trigger/v1/getTriggerOrders`, {
         params: { user: walletAddress, orderStatus: 'active' },
@@ -110,15 +113,16 @@ export class OrderExecutor {
       });
 
       const orders: any[] = Array.isArray(data) ? data : data?.orders ?? [];
-      return new Set(
-        orders.map((o) => o.orderKey ?? o.publicKey ?? o.account).filter(Boolean)
-      );
+      return {
+        keys: new Set(orders.map((o) => o.orderKey ?? o.publicKey ?? o.account).filter(Boolean)),
+        success: true,
+      };
     } catch (err: any) {
       console.error(
         `Jupiter open-orders fetch failed for ${walletAddress}:`,
         err?.response?.data ?? err.message
       );
-      return new Set(); // Safe fallback — don't mark anything as filled on API error
+      return { keys: new Set(), success: false }; // Never mark filled on API error
     }
   }
 
