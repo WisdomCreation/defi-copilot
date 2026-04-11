@@ -29,6 +29,7 @@ export async function ordersRoutes(fastify: FastifyInstance) {
    */
   fastify.post('/api/orders', async (request, reply) => {
     try {
+      console.log('📝 Creating order with data:', JSON.stringify(request.body, null, 2));
       const data = CreateOrderSchema.parse(request.body);
 
       // Find or create user
@@ -85,7 +86,18 @@ export async function ordersRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error: any) {
-      console.error('Error creating order:', error);
+      console.error('❌ Error creating order:', error);
+      
+      // Handle Zod validation errors
+      if (error.name === 'ZodError') {
+        const issues = error.issues.map((issue: any) => 
+          `${issue.path.join('.')}: ${issue.message}`
+        ).join(', ');
+        return reply.code(400).send({
+          error: `Validation error: ${issues}`,
+        });
+      }
+      
       return reply.code(400).send({
         error: error.message || 'Failed to create order',
       });
