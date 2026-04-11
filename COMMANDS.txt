@@ -1,0 +1,93 @@
+DeFi Copilot — Command Reference
+==================================
+
+
+── TRADING ────────────────────────────────────────────────────────────
+swap 0.5 SOL to USDC
+swap 100 USDC to SOL
+buy 0.1 SOL with USDC
+sell all my JUP
+set a limit order: buy SOL when price drops to $120
+set a take-profit: sell SOL at $200
+set a DCA: buy $20 USDC of SOL every day for 7 days
+cancel my limit order
+show my active orders
+
+
+── PORTFOLIO ──────────────────────────────────────────────────────────
+show my portfolio
+what tokens do I hold
+what's my total balance
+show my transaction history
+show recent swaps
+
+
+── MARKET INTEL ───────────────────────────────────────────────────────
+what's the price of SOL
+show me trending tokens
+what's the fear and greed index
+show market overview
+price of JUP
+
+
+── YIELD / DeFi ───────────────────────────────────────────────────────
+best SOL yields
+where can I earn the most on USDC
+show yield opportunities for SOL
+best APY for USDC
+
+
+── PAYMENTS ───────────────────────────────────────────────────────────
+send 0.1 SOL to <address>
+send 50 USDC to hassan
+send 0.05 SOL to alice and 0.05 SOL to bob
+split 0.3 SOL between alice, bob, carol
+schedule: send 0.1 SOL to hassan on april 15
+send hassan 0.1 SOL on may 1st
+create a payment link for 1 SOL
+show my spending summary
+show payments this month
+
+
+── CONTACTS ───────────────────────────────────────────────────────────
+save this address as hassan: <address>
+add contact alice <address>
+show my contacts
+lookup hassan
+delete contact alice
+
+
+── PRIVACY ────────────────────────────────────────────────────────────
+send hassan 0.5 SOL privately
+send <address> 0.5 SOL privately using ghostpay
+send <address> 0.5 SOL privately using houdini
+compare privacy routes for 1 SOL
+show privacy options
+generate stealth address
+screen wallet <address>
+check if <address> is safe
+
+
+── TAX ────────────────────────────────────────────────────────────────
+show my tax report
+estimate my capital gains
+export my trades as CSV
+find tax loss harvesting opportunities
+show proof of funds
+run OFAC compliance check on <address>
+
+
+── AUTOMATION / SESSION KEYS ──────────────────────────────────────────
+schedule payment: send 0.1 SOL to <address> on april 15
+set up session key for scheduled payment
+fund session wallet
+
+
+── ORDERS (DASHBOARD) ─────────────────────────────────────────────────
+show my orders
+show order dashboard
+cancel order <id>
+
+
+Note: Replace <address> with a real Solana wallet address or a saved contact name.
+      GhostPay and Houdini require a minimum of $50 USD equivalent per private send.

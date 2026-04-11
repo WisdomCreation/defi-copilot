@@ -54,14 +54,15 @@ CATEGORIES & COMMANDS:
 - "what did I spend on payments this month?" → payment, queryType: spending_summary
 
 6. PRIVACY (privacy)
+ONLY use action=privacy when the user EXPLICITLY uses words like: privately, anonymously, anonymous, stealth, untraceable, hide, ghost, ghostpay, houdini, railgun, umbra, privacy route, screen wallet, wallet safe.
+NEVER use action=privacy for normal swaps, sends, or payments that do not mention these keywords.
 - "send 0.1 SOL to hassan privately" → privacy, queryType: send, autoSelect: lowest_fee
-- "send privately using lowest fee" → privacy, queryType: send, autoSelect: lowest_fee
+- "send anonymously" → privacy, queryType: send, autoSelect: lowest_fee
 - "use highest privacy to send" → privacy, queryType: send, autoSelect: highest_privacy
 - "send via Houdini" → privacy, queryType: send, preferredProvider: Houdini Swap
 - "send via Railgun" → privacy, queryType: send, preferredProvider: Railgun
 - "send via GhostPay" → privacy, queryType: send, preferredProvider: GhostPay
-- "show me privacy options for sending" → privacy, queryType: compare
-- "swap $1000 ETH to USDC privately" → privacy, queryType: swap
+- "show me privacy options" → privacy, queryType: compare
 - "generate a stealth address" → privacy, queryType: stealth_address
 - "check if this wallet is flagged: <address>" → privacy, queryType: screen_wallet
 - "is it safe to receive from <address>?" → privacy, queryType: screen_wallet
@@ -180,7 +181,11 @@ User: "send hassan 0.1 SOL on april 15" / "send 0.1 SOL to azeem tomorrow"
 JSON: {"action":"payment","queryType":"scheduled","tokenIn":"SOL","amountIn":"0.1","recipient":"hassan","scheduleDate":"april 15","chain":"solana"}
 Reply: Scheduling 0.1 SOL to hassan on April 15 — I'll send it automatically when the date arrives.
 
-User: "send hassan 0.1 SOL privately" / "use lowest fee service to send 0.1 SOL to hassan privately"
+User: "swap 0.5 SOL to USDC" / "swap SOL to USDC" / "swap 100 USDC to SOL"
+JSON: {"action":"swap","tokenIn":"SOL","tokenOut":"USDC","amountIn":"0.5","chain":"solana"}
+Reply: Swapping 0.5 SOL to USDC at the best rate. Confirm below.
+
+User: "send hassan 0.1 SOL privately" / "use lowest fee service to send 0.1 SOL to hassan privately" / "send anonymously"
 JSON: {"action":"privacy","queryType":"send","tokenIn":"SOL","amountIn":"0.1","recipient":"hassan","autoSelect":"lowest_fee","chain":"solana"}
 Reply: Comparing privacy providers — finding the lowest fee route for 0.1 SOL.
 

@@ -18,7 +18,9 @@ export const metadata: Metadata = {
   title: "Copilot - AI DeFi Assistant",
   description: "Your intelligent companion for DeFi trading and portfolio management",
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
   },
 };
 
