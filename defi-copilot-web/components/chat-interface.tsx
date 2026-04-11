@@ -268,11 +268,11 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         body: JSON.stringify(orderData),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to create order')
-      }
-
       const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create order')
+      }
 
       // Success!
       setMessages((prev) => [
