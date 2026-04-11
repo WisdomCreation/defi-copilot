@@ -24,7 +24,7 @@ export default function Home() {
   return (
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       {/* Chat History Sidebar */}
-      <div className="w-64 hidden md:block border-r" style={{ borderColor: 'var(--border)' }}>
+      <div className="w-64 hidden md:block border-r" style={{ borderColor: 'var(--border)', position: 'relative', zIndex: 50 }}>
         <ChatHistory 
           onNavigate={setCurrentSection}
           currentSection={currentSection}
@@ -35,7 +35,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Floating Wallet Button */}
-        <div className="fixed top-4 right-4" style={{ zIndex: 40 }}>
+        <div className="fixed top-4 right-4" style={{ zIndex: 30 }}>
           <WalletConnect />
         </div>
 

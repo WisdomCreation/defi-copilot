@@ -64,21 +64,38 @@ export function CopilotLogoSmall({ size = 24 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="logoGradSmall" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#D0D0D0" />
+          <stop offset="0%" stopColor="#A78BFA" />
+          <stop offset="50%" stopColor="#7B70FF" />
+          <stop offset="100%" stopColor="#5B4FE0" />
+        </linearGradient>
+        <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#60A5FA" />
+          <stop offset="100%" stopColor="#3B82F6" />
         </linearGradient>
       </defs>
       
+      {/* Main circle with purple gradient */}
       <circle cx="50" cy="50" r="48" fill="url(#logoGradSmall)"/>
       
-      {/* Simplified compass */}
-      <path d="M50 15 L55 40 L50 37 L45 40 Z" fill="white" opacity="0.9"/>
-      <path d="M85 50 L60 55 L63 50 L60 45 Z" fill="white" opacity="0.6"/>
-      <path d="M50 85 L55 60 L50 63 L45 60 Z" fill="white" opacity="0.6"/>
-      <path d="M15 50 L40 55 L37 50 L40 45 Z" fill="white" opacity="0.6"/>
+      {/* DeFi-themed geometric pattern */}
+      {/* Top triangle - represents growth/uptrend */}
+      <path d="M50 20 L65 45 L35 45 Z" fill="white" opacity="0.2"/>
+      <path d="M50 25 L60 42 L40 42 Z" fill="url(#accentGrad)" opacity="0.8"/>
       
-      <circle cx="50" cy="50" r="8" fill="white" opacity="0.95"/>
-      <circle cx="50" cy="50" r="35" stroke="white" strokeWidth="1" fill="none" opacity="0.1"/>
+      {/* Center hexagon - blockchain/network */}
+      <path d="M50 35 L60 40 L60 50 L50 55 L40 50 L40 40 Z" fill="white" opacity="0.95"/>
+      
+      {/* Inner nodes - connection points */}
+      <circle cx="50" cy="42" r="3" fill="url(#logoGradSmall)"/>
+      <circle cx="56" cy="45" r="2.5" fill="url(#accentGrad)" opacity="0.8"/>
+      <circle cx="44" cy="45" r="2.5" fill="url(#accentGrad)" opacity="0.8"/>
+      
+      {/* Bottom arc - represents liquidity/flow */}
+      <path d="M35 60 Q50 70 65 60" stroke="white" strokeWidth="3" fill="none" opacity="0.3"/>
+      <path d="M38 62 Q50 68 62 62" stroke="url(#accentGrad)" strokeWidth="2" fill="none" opacity="0.9"/>
+      
+      {/* Orbital ring */}
+      <circle cx="50" cy="50" r="40" stroke="white" strokeWidth="1.5" fill="none" opacity="0.15"/>
     </svg>
   )
 }
