@@ -148,11 +148,11 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, { bg: string; color: string; icon: any }> = {
-      watching: { bg: 'rgba(255,179,71,0.15)', color: '#FFB347', icon: Clock },
-      triggered: { bg: 'rgba(123,112,255,0.15)', color: '#7B70FF', icon: TrendingUp },
-      filled: { bg: 'rgba(0,201,167,0.15)', color: '#00C9A7', icon: CheckCircle },
-      cancelled: { bg: 'rgba(139,143,173,0.15)', color: '#8B8FAD', icon: XCircle },
-      failed: { bg: 'rgba(255,107,107,0.15)', color: '#FF6B6B', icon: XCircle },
+      watching: { bg: 'rgba(255,255,255,0.06)', color: '#AAAAAA', icon: Clock },
+      triggered: { bg: 'rgba(255,255,255,0.08)', color: '#FFFFFF', icon: TrendingUp },
+      filled: { bg: 'rgba(255,255,255,0.08)', color: '#FFFFFF', icon: CheckCircle },
+      cancelled: { bg: 'rgba(255,255,255,0.04)', color: '#666666', icon: XCircle },
+      failed: { bg: 'rgba(255,255,255,0.06)', color: '#AAAAAA', icon: XCircle },
     }
     
     const style = styles[status] || styles.watching
@@ -212,11 +212,11 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
         {/* Stats */}
         <div className="grid grid-cols-5 gap-3 mb-6">
           {[
-            { label: 'Total', value: stats.total, color: '#7B70FF' },
-            { label: 'Active', value: stats.watching, color: '#FFB347' },
-            { label: 'Filled', value: stats.filled, color: '#00C9A7' },
-            { label: 'Cancelled', value: stats.cancelled, color: '#8B8FAD' },
-            { label: 'Failed', value: stats.failed, color: '#FF6B6B' },
+            { label: 'Total', value: stats.total, color: '#FFFFFF' },
+            { label: 'Active', value: stats.watching, color: '#CCCCCC' },
+            { label: 'Filled', value: stats.filled, color: '#FFFFFF' },
+            { label: 'Cancelled', value: stats.cancelled, color: '#666666' },
+            { label: 'Failed', value: stats.failed, color: '#AAAAAA' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -241,8 +241,8 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
               onClick={() => setFilter(f)}
               className="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
               style={{
-                backgroundColor: filter === f ? '#7B70FF' : 'var(--hover)',
-                color: filter === f ? '#fff' : '#999',
+                backgroundColor: filter === f ? 'rgba(255,255,255,0.15)' : 'var(--hover)',
+                color: filter === f ? '#FFFFFF' : '#999',
               }}
             >
               {f}
@@ -271,7 +271,7 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
                   <div className="flex items-start gap-3 flex-1">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center mt-1"
-                      style={{ backgroundColor: 'rgba(83,74,183,0.15)' }}
+                      style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
                     >
                       {getOrderIcon(order.type)}
                     </div>
@@ -289,13 +289,13 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
                       </div>
                       
                       {order.triggerPrice && (
-                        <div className="text-xs mb-1" style={{ color: '#7B70FF' }}>
+                        <div className="text-xs mb-1" style={{ color: '#CCCCCC' }}>
                           Trigger: ${order.triggerPrice} {order.triggerCondition}
                         </div>
                       )}
                       
                       {order.dcaMaxExecutions && (
-                        <div className="text-xs" style={{ color: '#00C9A7' }}>
+                        <div className="text-xs" style={{ color: '#AAAAAA' }}>
                           DCA: {order.dcaExecutions || 0}/{order.dcaMaxExecutions} executions
                         </div>
                       )}
@@ -310,7 +310,7 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs underline"
-                          style={{ color: '#7B70FF' }}
+                          style={{ color: '#FFFFFF' }}
                         >
                           View Transaction
                         </a>
@@ -323,10 +323,10 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
                       onClick={() => cancelOrder(order)}
                       disabled={cancellingId === order.id}
                       className="p-2 rounded-lg transition-colors disabled:opacity-40"
-                      style={{ color: '#FF6B6B' }}
+                      style={{ color: '#AAAAAA' }}
                       title="Cancel order (signs cancel tx on Jupiter)"
                       onMouseOver={(e) =>
-                        (e.currentTarget.style.backgroundColor = 'rgba(255,107,107,0.15)')
+                        (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')
                       }
                       onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >

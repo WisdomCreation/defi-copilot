@@ -328,7 +328,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
             <button
               onClick={() => navigator.clipboard.writeText(qr.solanaPayUrl)}
               className="flex-1 py-1.5 rounded text-xs font-medium"
-              style={{ backgroundColor: 'rgba(0,201,167,0.1)', color: '#FFFFFF' }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#FFFFFF' }}
             >
               Copy Solana Pay URL
             </button>
@@ -444,7 +444,7 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
   return null
 }
 
-const PRIVACY_LEVEL_COLOR: Record<string, string> = { Maximum: '#FFFFFF', High: '#AAAAAA', Medium: '#FFFFFF' }
+const PRIVACY_LEVEL_COLOR: Record<string, string> = { Maximum: '#FFFFFF', High: '#CCCCCC', Medium: '#888888' }
 
 function PrivacySendReadyCard({ qr, userAddress }: { qr: any; userAddress?: string }) {
   const [sending, setSending] = useState(false)
@@ -955,7 +955,7 @@ function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string 
   if (qr.queryType === 'delete') {
     return (
       <div className="mt-3 p-3 rounded-lg flex items-center gap-2 text-xs"
-        style={{ backgroundColor: deleted ? 'rgba(255,107,107,0.06)' : 'var(--background)', border: `1px solid ${deleted ? 'rgba(255,255,255,0.12)' : 'var(--border)'}` }}>
+        style={{ backgroundColor: 'var(--background)', border: `1px solid ${deleted ? 'rgba(255,255,255,0.12)' : 'var(--border)'}` }}>
         {deleted
           ? <><Trash2 className="w-3 h-3" style={{ color: '#FFFFFF' }} /><span style={{ color: '#FFFFFF' }}><strong>{qr.contactName}</strong> removed from contacts.</span></>
           : <><Loader2 className="w-3 h-3 animate-spin" /><span style={{ color: '#999' }}>Removing...</span></>

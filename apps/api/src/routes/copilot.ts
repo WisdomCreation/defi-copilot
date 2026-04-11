@@ -319,7 +319,11 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
               });
               aiReply = `GhostPay send initiated! Send ${queryResult.amountIn} ${queryResult.tokenIn} to the deposit address shown. Your wallet will be completely unlinked from ${recipient.slice(0,8)}...`;
             } catch (e: any) {
-              aiReply = `GhostPay error: ${e.message}. Showing all routes instead.`;
+              const msg = e.response?.data?.error || e.message || '';
+              const isMinimum = msg.toLowerCase().includes('50') || msg.toLowerCase().includes('minimum');
+              aiReply = isMinimum
+                ? `GhostPay requires a minimum of $50 USD per send. Your amount is too small — try at least 0.35 SOL. Showing all routes below.`
+                : `GhostPay error: ${msg}. Showing all routes instead.`;
               queryResult = await getPrivacyRoutes({ tokenIn: token, tokenOut, amount, recipient, autoSelect: 'lowest_fee' });
             }
           } else if (preferred && recipient && preferred.includes('houdini')) {
@@ -329,7 +333,8 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
               });
               aiReply = `Houdini exchange created! Send ${queryResult.amountIn} ${queryResult.tokenIn} to the deposit address shown. Anonymous routing is active.`;
             } catch (e: any) {
-              aiReply = `Houdini error: ${e.message}. Showing all routes instead.`;
+              const msg = e.response?.data?.error || e.message || '';
+              aiReply = `Houdini error: ${msg}. Showing all routes instead.`;
               queryResult = await getPrivacyRoutes({ tokenIn: token, tokenOut, amount, recipient, autoSelect: 'lowest_fee' });
             }
           } else {
