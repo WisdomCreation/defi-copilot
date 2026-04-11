@@ -5,6 +5,7 @@ import type { CopilotResponse } from '@defi-copilot/shared';
 import { findOrCreateUser, findOrCreateConversation, addMessage } from '../db';
 import { prisma } from '../db/prisma';
 import { handlePortfolioQuery, handleMarketQuery, handleYieldQuery, handleTransactionHistory } from '../services/queryHandlers';
+import { handleTaxReport, handleCapitalGains, handleExportCSV, handleTaxLossHarvesting, handleProofOfFunds, handleOFACCheck } from '../services/taxHandlers';
 import { 
   getJupiterQuote, 
   getTokenAddress, 
@@ -281,6 +282,29 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
         aiReply = queryResult.pools?.length
           ? `Found ${queryResult.pools.length} ${token} yield opportunities. Top APY: ${queryResult.pools[0]?.apy}% on ${queryResult.pools[0]?.protocol}.`
           : `No ${token} yield pools found above $500k TVL right now.`;
+      }
+
+      // ── Tax query handler ────────────────────────────────────────────────
+      if (intent?.action === 'tax_query') {
+        const qt = intent.queryType || 'report';
+        let queryResult: any;
+        if (qt === 'gains' || qt === 'tax') {
+          queryResult = await handleCapitalGains(walletAddress);
+        } else if (qt === 'csv' || qt === 'export') {
+          queryResult = await handleExportCSV(walletAddress);
+        } else if (qt === 'harvest' || qt === 'tax_loss') {
+          queryResult = await handleTaxLossHarvesting(walletAddress);
+        } else if (qt === 'proof_of_funds' || qt === 'proof') {
+          queryResult = await handleProofOfFunds(walletAddress);
+        } else if (qt === 'ofac' || qt === 'compliance') {
+          queryResult = await handleOFACCheck(walletAddress);
+        } else {
+          queryResult = await handleTaxReport(walletAddress);
+        }
+        enrichedIntent = { ...intent, queryResult };
+        if (queryResult.error) {
+          aiReply = `I ran your tax query. (Note: ${queryResult.error})`;
+        }
       }
 
       // Handle cancel_order: fetch active orders from DB and attach to intent

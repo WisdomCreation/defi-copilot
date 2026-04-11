@@ -7,6 +7,7 @@ import { copilotRoutes } from './routes/copilot';
 import { quoteRoutes } from './routes/quote';
 import { ordersRoutes } from './routes/orders';
 import { priceRoutes } from './routes/price';
+import taxRoutes from './routes/tax';
 
 const server = Fastify({
   logger: {
@@ -35,6 +36,7 @@ async function start() {
   await server.register(quoteRoutes, { prefix: '/api' });
   await server.register(ordersRoutes);
   await server.register(priceRoutes, { prefix: '/api' });
+  await server.register(taxRoutes);
 
   // ─── Start Order Executor (Production Only) ───────────
   if (process.env.NODE_ENV === 'production') {

@@ -140,6 +140,129 @@ function QueryResultCard({ intent }: { intent: any }) {
     )
   }
 
+  // Tax report
+  if (qr.type === 'tax_report') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Tax Report {qr.year}</span>
+          <span className="text-xs" style={{ color: '#7B70FF' }}>{qr.taxableEvents} taxable events</span>
+        </div>
+        <div className="px-3 py-2 grid grid-cols-3 gap-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="text-center"><div className="font-bold" style={{ color: 'var(--foreground)' }}>{qr.totalSwaps}</div><div style={{ color: '#999' }}>Total Swaps</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#FF6B6B' }}>{qr.taxableEvents}</div><div style={{ color: '#999' }}>Taxable</div></div>
+          <div className="text-center"><div className="font-bold" style={{ color: '#00C9A7' }}>{qr.disposals}</div><div style={{ color: '#999' }}>Disposals</div></div>
+        </div>
+        {qr.swaps?.slice(0, 5).map((s: any, i: number) => (
+          <div key={i} className="px-3 py-2 text-xs flex justify-between" style={{ borderTop: '1px solid var(--border)' }}>
+            <div style={{ color: 'var(--foreground)' }}>{s.tokenIn} → {s.tokenOut}</div>
+            <div style={{ color: '#999' }}>{s.date}</div>
+          </div>
+        ))}
+        {qr.swaps?.length > 5 && <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>+{qr.swaps.length - 5} more events</div>}
+      </div>
+    )
+  }
+
+  // Capital gains
+  if (qr.type === 'capital_gains') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Capital Gains Estimate</span>
+        </div>
+        <div className="px-3 py-2 grid grid-cols-2 gap-3 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+          <div><div className="font-bold text-sm" style={{ color: parseFloat(qr.realizedGains) >= 0 ? '#00C9A7' : '#FF6B6B' }}>${qr.realizedGains}</div><div style={{ color: '#999' }}>Realized Gains</div></div>
+          <div><div className="font-bold text-sm" style={{ color: '#FFB347' }}>${qr.estimatedTax}</div><div style={{ color: '#999' }}>Est. Tax (~20%)</div></div>
+        </div>
+        <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>{qr.note}</div>
+      </div>
+    )
+  }
+
+  // CSV export
+  if (qr.type === 'csv_export') {
+    const blob = typeof window !== 'undefined' ? new Blob([qr.csv || ''], { type: 'text/csv' }) : null
+    const url = blob ? URL.createObjectURL(blob) : '#'
+    return (
+      <div className="mt-3 p-3 rounded-lg flex items-center justify-between text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+        <div>
+          <div className="font-semibold" style={{ color: 'var(--foreground)' }}>Trade Export Ready</div>
+          <div style={{ color: '#999' }}>{qr.rowCount} transactions</div>
+        </div>
+        {blob && (
+          <a href={url} download="defi-trades.csv" className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+            Download CSV
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  // Tax-loss harvesting
+  if (qr.type === 'tax_loss_harvesting') {
+    if (!qr.opportunities?.length) return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>
+        No tax-loss harvesting opportunities found — all positions are in profit!
+      </div>
+    )
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>Tax-Loss Harvesting Opportunities</div>
+        {qr.opportunities.map((o: any, i: number) => (
+          <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+            <div><span className="font-semibold" style={{ color: 'var(--foreground)' }}>{o.symbol}</span><span className="ml-2" style={{ color: '#999' }}>Basis: ${o.costBasis}</span></div>
+            <div className="text-right"><div style={{ color: '#FF6B6B' }}>{o.unrealizedLoss} USD ({o.lossPercent}%)</div><div style={{ color: '#999' }}>Current: ${o.currentValue}</div></div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Proof of funds
+  if (qr.type === 'proof_of_funds') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Proof of Funds</span>
+          <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>${qr.totalUsd} USD</span>
+        </div>
+        <div className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
+          <div>{qr.walletAddress?.slice(0, 16)}...{qr.walletAddress?.slice(-8)}</div>
+          <div>Snapshot: {new Date(qr.timestamp).toLocaleString()}</div>
+        </div>
+        {qr.holdings?.map((h: any, i: number) => (
+          <div key={i} className="px-3 py-2 flex justify-between text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--foreground)' }}>{h.symbol} — {h.amount}</span>
+            <span style={{ color: '#00C9A7' }}>${h.usdValue}</span>
+          </div>
+        ))}
+        <div className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+          <a href={qr.explorerUrl} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>
+        </div>
+      </div>
+    )
+  }
+
+  // OFAC check
+  if (qr.type === 'ofac_check') {
+    return (
+      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--background)', border: `1px solid ${qr.isClean ? 'rgba(0,201,167,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold" style={{ color: 'var(--foreground)' }}>Compliance Check</span>
+          <span className="font-bold" style={{ color: qr.isClean ? '#00C9A7' : '#FF6B6B' }}>
+            {qr.isClean ? '✓ Clean' : '⚠ Risk Detected'} — {qr.riskLevel?.toUpperCase()} risk
+          </span>
+        </div>
+        {qr.flags?.length > 0 && (
+          <div className="mt-2 space-y-1">{qr.flags.map((f: string, i: number) => <div key={i} className="text-xs" style={{ color: '#FF6B6B' }}>• {f}</div>)}</div>
+        )}
+        {qr.note && <div className="mt-1 text-xs" style={{ color: '#999' }}>{qr.note}</div>}
+        <div className="mt-1 text-xs" style={{ color: '#999' }}>Checked: {new Date(qr.checkedAt).toLocaleString()}</div>
+      </div>
+    )
+  }
+
   return null
 }
 
