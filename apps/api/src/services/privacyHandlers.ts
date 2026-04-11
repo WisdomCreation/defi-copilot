@@ -81,22 +81,22 @@ function getRailgunQuote(token: string, amount: number): ProviderQuote {
   };
 }
 
-// ─── GhostPay (anonymous routing layer) ─────────────────────────────────────
+// ─── GhostPay / GhostWareOS (Solana privacy protocol) ───────────────────────
 function getGhostPayQuote(token: string, amount: number): ProviderQuote {
-  // GhostPay uses stealth address + intermediate hops, ~0.3% fee
   const feePct = 0.3;
   return {
     provider: 'GhostPay',
     icon: '👻',
-    description: 'Stealth routing — wallet linkability broken, recipient identity hidden',
+    description: 'GhostWareOS — breaks sender/receiver linkability on Solana via GhostMask + GhostScrub',
     privacyLevel: 'High',
     feePct,
     feeUsd: (amount * feePct / 100).toFixed(2),
     estimatedOutput: amount * (1 - feePct / 100),
-    estimatedTime: '3-7 min',
-    method: 'Stealth address + multi-hop routing',
-    url: `https://ghostpay.io`,
+    estimatedTime: '1-3 min',
+    method: 'GhostMask alias + GhostScrub routing (Solana)',
+    url: `https://app.ghostwareos.com/`,
     available: true,
+    apiDirect: true,  // supports direct on-chain call
   };
 }
 
@@ -131,6 +131,7 @@ export interface ProviderQuote {
   method: string;
   url: string;
   available: boolean;
+  apiDirect?: boolean;   // can execute without leaving the app
   recommended?: boolean;
 }
 

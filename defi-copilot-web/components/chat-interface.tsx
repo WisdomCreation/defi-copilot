@@ -7,6 +7,7 @@ import { OrderPlacement } from './order-placement'
 import { CopilotLogo } from './logo'
 import { getContacts, saveContact, deleteContact, resolveContact, resolveContacts, type Contact } from '../hooks/useContacts'
 import { saveScheduledPayment, getScheduledPayments, cancelScheduledPayment, updateScheduledPayment, parseScheduleDate, type ScheduledPayment } from '../hooks/useScheduledPayments'
+import { getSessionKey, createSessionKey, fundSessionKey, sessionKeySend, getSessionBalance, type SessionKey } from '../hooks/useSessionKey'
 
 function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: string }) {
   const qr = intent?.queryResult
@@ -532,13 +533,26 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
   )
 }
 
+function formatTimeLeft(ms: number): string {
+  if (ms <= 0) return 'Now'
+  const days = Math.floor(ms / 86400000)
+  const hours = Math.floor((ms % 86400000) / 3600000)
+  const mins = Math.floor((ms % 3600000) / 60000)
+  return days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+}
+
 function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: string }) {
   const [entry, setEntry] = useState<ScheduledPayment | null>(null)
   const [timeLeft, setTimeLeft] = useState('')
   const [fired, setFired] = useState(false)
   const [cancelled, setCancelled] = useState(false)
+  const [sessionKey, setSessionKey] = useState<SessionKey | null>(null)
+  const [sessionBalance, setSessionBalance] = useState<number>(0)
+  const [setupStep, setSetupStep] = useState<'idle' | 'creating' | 'funding' | 'ready'>('idle')
+  const [setupError, setSetupError] = useState('')
+  const [statusMsg, setStatusMsg] = useState('')
 
-  // Save on mount
+  // Save payment + check session key on mount
   useEffect(() => {
     if (!userAddress || !qr.toAddress || !qr.amount) return
     const parsed = parseScheduleDate(qr.scheduleDate || '')
@@ -556,58 +570,99 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
       status: 'pending',
     })
     setEntry(saved)
+    const sk = getSessionKey(userAddress)
+    setSessionKey(sk)
+    if (sk) {
+      getSessionBalance(userAddress).then(b => {
+        setSessionBalance(b)
+        setSetupStep(b >= qr.amount + 0.001 ? 'ready' : 'funding')
+      })
+    }
   }, [])
 
-  // Countdown + auto-fire
+  // Countdown + auto-fire using session key
   useEffect(() => {
-    if (!entry || cancelled) return
+    if (!entry || cancelled || entry.status === 'sent') return
+    const tick = () => setTimeLeft(formatTimeLeft(entry.scheduledAt - Date.now()))
+    tick()
     const interval = setInterval(async () => {
-      const now = Date.now()
-      const diff = entry.scheduledAt - now
-      if (diff <= 0) {
-        clearInterval(interval)
-        if (fired) return
-        setFired(true)
-        // Auto-send
+      const diff = entry.scheduledAt - Date.now()
+      setTimeLeft(formatTimeLeft(diff))
+      if (diff > 0 || fired) return
+      setFired(true)
+      clearInterval(interval)
+
+      const sk = getSessionKey(userAddress!)
+      if (sk) {
+        // ── True auto-send via session key ──────────────────────────────
+        setStatusMsg('Auto-sending via session key...')
         try {
-          const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
-          const phantom = (window as any).phantom?.solana
-          if (!phantom?.isConnected) { phantom?.connect(); return }
-          const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com')
-          const from = new PublicKey(userAddress!)
-          const to = new PublicKey(entry.toAddress)
-          const { blockhash } = await connection.getLatestBlockhash()
-          const tx = new Transaction({ recentBlockhash: blockhash, feePayer: from })
-          tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: Math.round(entry.amount * LAMPORTS_PER_SOL) }))
-          const signed = await phantom.signTransaction(tx)
-          const sig = await connection.sendRawTransaction(signed.serialize())
+          const sig = await sessionKeySend(userAddress!, entry.toAddress, entry.amount)
           updateScheduledPayment(userAddress!, entry.id, { status: 'sent', txSignature: sig })
           setEntry(prev => prev ? { ...prev, status: 'sent', txSignature: sig } : prev)
         } catch (e: any) {
-          updateScheduledPayment(userAddress!, entry.id, { status: 'failed' })
-          setEntry(prev => prev ? { ...prev, status: 'failed' } : prev)
+          setStatusMsg(`Auto-send failed: ${e.message}. Falling back to Phantom...`)
+          phantomFallback()
         }
-        return
+      } else {
+        // ── Fallback: Phantom popup ─────────────────────────────────────
+        phantomFallback()
       }
-      const days = Math.floor(diff / 86400000)
-      const hours = Math.floor((diff % 86400000) / 3600000)
-      const mins = Math.floor((diff % 3600000) / 60000)
-      setTimeLeft(days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`)
-    }, 10000)
-    // Set initial immediately
-    const diff = entry.scheduledAt - Date.now()
-    const days = Math.floor(diff / 86400000)
-    const hours = Math.floor((diff % 86400000) / 3600000)
-    const mins = Math.floor((diff % 3600000) / 60000)
-    setTimeLeft(days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`)
+    }, 15000)
     return () => clearInterval(interval)
   }, [entry, cancelled, fired])
 
+  const phantomFallback = async () => {
+    try {
+      const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
+      const phantom = (window as any).phantom?.solana
+      if (!phantom?.isConnected) await phantom?.connect()
+      const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com')
+      const from = new PublicKey(userAddress!)
+      const to = new PublicKey(entry!.toAddress)
+      const { blockhash } = await connection.getLatestBlockhash()
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: from })
+      tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: Math.round(entry!.amount * LAMPORTS_PER_SOL) }))
+      const signed = await phantom.signTransaction(tx)
+      const sig = await connection.sendRawTransaction(signed.serialize())
+      updateScheduledPayment(userAddress!, entry!.id, { status: 'sent', txSignature: sig })
+      setEntry(prev => prev ? { ...prev, status: 'sent', txSignature: sig } : prev)
+    } catch (e: any) {
+      updateScheduledPayment(userAddress!, entry!.id, { status: 'failed' })
+      setEntry(prev => prev ? { ...prev, status: 'failed' } : prev)
+    }
+  }
+
+  const handleCreateSessionKey = async () => {
+    setSetupStep('creating')
+    setSetupError('')
+    try {
+      const result = await createSessionKey(userAddress!, Math.max(qr.amount * 2, 1), 30)
+      setSessionKey(result.sessionKey)
+      setSetupStep('funding')
+    } catch (e: any) {
+      setSetupError(e.message)
+      setSetupStep('idle')
+    }
+  }
+
+  const handleFundSessionKey = async () => {
+    setSetupError('')
+    try {
+      const needed = qr.amount + 0.005  // amount + fees
+      await fundSessionKey(userAddress!, needed)
+      const bal = await getSessionBalance(userAddress!)
+      setSessionBalance(bal)
+      setSetupStep('ready')
+    } catch (e: any) {
+      setSetupError(e.message)
+    }
+  }
+
   if (!entry) {
-    const parsed = parseScheduleDate(qr.scheduleDate || '')
-    if (!parsed) return (
+    if (!parseScheduleDate(qr.scheduleDate || '')) return (
       <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#FF6B6B' }}>
-        Could not parse date &quot;{qr.scheduleDate}&quot;. Try &quot;april 15&quot;, &quot;tomorrow&quot;, or &quot;in 3 days&quot;.
+        Could not parse &quot;{qr.scheduleDate}&quot;. Try &quot;april 15&quot;, &quot;tomorrow&quot;, or &quot;in 3 days&quot;.
       </div>
     )
     return null
@@ -615,35 +670,86 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
 
   if (entry.status === 'sent') return (
     <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
-      <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Scheduled payment sent!</div>
+      <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Payment sent automatically!</div>
       {entry.txSignature && <a href={`https://solscan.io/tx/${entry.txSignature}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>}
     </div>
   )
-
   if (cancelled || entry.status === 'cancelled') return (
-    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>
-      Scheduled payment cancelled.
-    </div>
+    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>Scheduled payment cancelled.</div>
   )
+
+  const hasSessionKey = !!sessionKey && setupStep === 'ready'
 
   return (
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.3)' }}>
+      {/* Header */}
       <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(123,112,255,0.08)' }}>
         <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>⏰ Scheduled Payment</span>
         <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>{timeLeft ? `in ${timeLeft}` : entry.label}</span>
       </div>
+
+      {/* Payment details */}
       <div className="px-3 py-2 text-xs space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{entry.toDisplay}</span></div>
         <div className="flex justify-between"><span style={{ color: '#999' }}>Amount</span><span style={{ color: 'var(--foreground)' }}>{entry.amount} {entry.token}</span></div>
         <div className="flex justify-between"><span style={{ color: '#999' }}>Send date</span><span style={{ color: '#7B70FF' }}>{entry.label}</span></div>
-        <div className="flex justify-between"><span style={{ color: '#999' }}>Status</span><span style={{ color: '#FFB347' }}>⏳ Phantom will prompt you to sign on {entry.label}</span></div>
+        <div className="flex justify-between">
+          <span style={{ color: '#999' }}>Mode</span>
+          <span style={{ color: hasSessionKey ? '#00C9A7' : '#FFB347' }}>
+            {hasSessionKey ? '🔑 Session key — fully automatic' : '⚠ Phantom required on send date'}
+          </span>
+        </div>
+        {statusMsg && <div style={{ color: '#FFB347' }}>{statusMsg}</div>}
       </div>
+
+      {/* Session key setup */}
+      {!hasSessionKey && (
+        <div className="px-3 py-2 space-y-2 text-xs" style={{ borderTop: '1px solid var(--border)', backgroundColor: 'rgba(123,112,255,0.04)' }}>
+          <div className="font-semibold" style={{ color: '#7B70FF' }}>🔑 Enable auto-send with Session Key</div>
+          <div style={{ color: '#999' }}>
+            A session key lets this payment fire automatically without Phantom approval.
+            You sign once now, then it sends itself on {entry.label}.
+          </div>
+          {setupStep === 'idle' && (
+            <button onClick={handleCreateSessionKey}
+              className="w-full py-1.5 rounded font-medium"
+              style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+              Set Up Session Key (sign message — no gas)
+            </button>
+          )}
+          {setupStep === 'creating' && (
+            <div className="flex items-center gap-2" style={{ color: '#999' }}><Loader2 className="w-3 h-3 animate-spin" />Waiting for Phantom signature...</div>
+          )}
+          {setupStep === 'funding' && sessionKey && (
+            <div className="space-y-2">
+              <div style={{ color: '#999' }}>
+                Fund the session wallet with <strong style={{ color: '#FFB347' }}>{(qr.amount + 0.005).toFixed(4)} SOL</strong> (payment amount + fees).
+                This is the only Phantom approval needed.
+              </div>
+              <div className="font-mono text-[10px] p-1.5 rounded break-all" style={{ backgroundColor: 'var(--hover)', color: '#7B70FF' }}>
+                {sessionKey.publicKey}
+              </div>
+              <button onClick={handleFundSessionKey}
+                className="w-full py-1.5 rounded font-medium"
+                style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}>
+                Fund Session Wallet via Phantom (one-time)
+              </button>
+            </div>
+          )}
+          {setupError && <div style={{ color: '#FF6B6B' }}>{setupError}</div>}
+        </div>
+      )}
+
+      {hasSessionKey && (
+        <div className="px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
+          Session wallet balance: <strong style={{ color: '#00C9A7' }}>{sessionBalance.toFixed(4)} SOL</strong> · Expires {new Date(sessionKey!.expiresAt).toLocaleDateString()}
+        </div>
+      )}
+
       <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
-        <button
-          onClick={() => { cancelScheduledPayment(userAddress!, entry.id); setCancelled(true) }}
+        <button onClick={() => { cancelScheduledPayment(userAddress!, entry.id); setCancelled(true) }}
           className="w-full py-1.5 rounded text-xs font-medium"
-          style={{ backgroundColor: 'rgba(255,107,107,0.1)', color: '#FF6B6B' }}
-        >
+          style={{ backgroundColor: 'rgba(255,107,107,0.1)', color: '#FF6B6B' }}>
           Cancel Scheduled Payment
         </button>
       </div>
