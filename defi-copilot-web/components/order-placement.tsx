@@ -86,20 +86,17 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
 
       console.log('🎯 Creating Jupiter Trigger Order...', { inputMint, outputMint, makingAmount, takingAmount })
 
-      // Step 1: Get transaction from Jupiter Trigger API
-      const response = await fetch('https://api.jup.ag/trigger/v1/createOrder', {
+      // Step 1: Get transaction via our backend proxy (avoids CORS)
+      const response = await fetch('/api/jupiter/create-order', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_JUPITER_API_KEY || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inputMint,
           outputMint,
           maker: phantom.publicKey.toString(),
           makingAmount,
           takingAmount,
-          expiredAt: null, // No expiry
+          expiredAt: null,
         }),
       })
 

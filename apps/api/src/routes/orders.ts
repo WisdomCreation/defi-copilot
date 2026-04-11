@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { getOrderExecutor, orderQueue } from '../services/orderExecutor';
+import axios from 'axios';
 
 const CreateOrderSchema = z.object({
   userWallet: z.string(),
@@ -25,7 +26,45 @@ const CancelOrderSchema = z.object({
   userWallet: z.string(),
 });
 
+const JupiterCreateOrderSchema = z.object({
+  inputMint: z.string(),
+  outputMint: z.string(),
+  maker: z.string(),
+  makingAmount: z.string(),
+  takingAmount: z.string(),
+  expiredAt: z.string().nullable().optional(),
+});
+
 export async function ordersRoutes(fastify: FastifyInstance) {
+  /**
+   * Proxy: Create Jupiter Trigger order (avoids CORS from browser)
+   */
+  fastify.post('/api/jupiter/create-order', async (request, reply) => {
+    try {
+      const body = JupiterCreateOrderSchema.parse(request.body);
+
+      const { data } = await axios.post(
+        'https://api.jup.ag/trigger/v1/createOrder',
+        body,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.JUPITER_API_KEY
+              ? { 'x-api-key': process.env.JUPITER_API_KEY }
+              : {}),
+          },
+          timeout: 15_000,
+        }
+      );
+
+      return reply.send(data);
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.error || error?.response?.data || error.message || 'Jupiter API error';
+      console.error('Jupiter createOrder proxy error:', errMsg);
+      return reply.code(502).send({ error: errMsg });
+    }
+  });
+
   /**
    * Create a new order
    */
@@ -49,7 +88,7 @@ export async function ordersRoutes(fastify: FastifyInstance) {
       }
 
       // Create order
-      const order = await prisma.order.create({
+      const order = await (prisma.order.create as any)({
         data: {
           userId: user.id,
           type: data.type,
@@ -196,7 +235,7 @@ export async function ordersRoutes(fastify: FastifyInstance) {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
         include: { user: true },
-      });
+      }) as any;
 
       if (!order) return reply.code(404).send({ error: 'Order not found' });
       if (order.user.walletAddress !== userWallet)
