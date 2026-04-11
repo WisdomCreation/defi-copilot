@@ -395,7 +395,7 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--background)' }}>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-8 pt-20 space-y-6">
+      <div className="flex-1 overflow-y-auto p-8 pt-20 pb-20 md:pb-8 space-y-6">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-2xl w-full px-4">

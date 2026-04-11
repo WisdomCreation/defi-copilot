@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
+import { MessageSquare, FileText, Code } from 'lucide-react'
 import { WalletConnect } from '@/components/wallet-connect'
 import { ChatHistory } from '@/components/chat-history'
 import { ChatInterface } from '@/components/chat-interface'
@@ -33,7 +34,7 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Floating Wallet Button */}
         <div className="fixed top-4 right-4" style={{ zIndex: 30 }}>
           <WalletConnect />
@@ -44,15 +45,22 @@ export default function Home() {
           <ChatInterface key={chatKey} address={address} chain={chainName} />
         )}
         
-        {currentSection === 'trades' && address && (
+        {currentSection === 'trades' && (
           <div className="flex-1 flex items-center justify-center p-8">
-            <div className="w-full max-w-6xl">
-              <OrderDashboard 
-                userWallet={address}
-                onClose={() => setCurrentSection('chats')}
-                embedded={true}
-              />
-            </div>
+            {address ? (
+              <div className="w-full max-w-6xl">
+                <OrderDashboard
+                  userWallet={address}
+                  onClose={() => setCurrentSection('chats')}
+                  embedded={true}
+                />
+              </div>
+            ) : (
+              <div className="text-center" style={{ color: '#999' }}>
+                <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Trades</h2>
+                <p>Connect your wallet to view and manage trades</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -82,6 +90,24 @@ export default function Home() {
             </div>
           </div>
         )}
+        {/* Mobile Bottom Nav */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 flex border-t" style={{ backgroundColor: 'var(--sidebar)', borderColor: 'var(--border)', zIndex: 40 }}>
+          {[
+            { id: 'chats', label: 'Chats', icon: MessageSquare },
+            { id: 'trades', label: 'Trades', icon: FileText },
+            { id: 'portfolio', label: 'Portfolio', icon: Code },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setCurrentSection(id)}
+              className="flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors"
+              style={{ color: currentSection === id ? 'var(--foreground)' : '#666' }}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
