@@ -7,6 +7,7 @@ import { prisma } from '../db/prisma';
 import { handlePortfolioQuery, handleMarketQuery, handleYieldQuery, handleTransactionHistory } from '../services/queryHandlers';
 import { handleTaxReport, handleCapitalGains, handleExportCSV, handleTaxLossHarvesting, handleProofOfFunds, handleOFACCheck } from '../services/taxHandlers';
 import { buildPaymentPreview, buildBatchPaymentPreview, buildPaymentLink, buildSpendingSummary } from '../services/paymentHandlers';
+import { getPrivacyRoutes, generateStealthAddress, screenWallet } from '../services/privacyHandlers';
 import { 
   getJupiterQuote, 
   getTokenAddress, 
@@ -283,6 +284,50 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
         aiReply = queryResult.pools?.length
           ? `Found ${queryResult.pools.length} ${token} yield opportunities. Top APY: ${queryResult.pools[0]?.apy}% on ${queryResult.pools[0]?.protocol}.`
           : `No ${token} yield pools found above $500k TVL right now.`;
+      }
+
+      // ── Privacy handler ─────────────────────────────────────────────────
+      if (intent?.action === 'privacy') {
+        const qt = intent.queryType || 'compare';
+        let queryResult: any;
+
+        if (qt === 'stealth_address') {
+          queryResult = await generateStealthAddress(walletAddress);
+          aiReply = 'Generated your stealth receive address via Umbra Protocol — share it with senders to receive funds privately.';
+
+        } else if (qt === 'screen_wallet') {
+          const target = intent.recipient || intent.queryToken || walletAddress;
+          queryResult = await screenWallet(target);
+          aiReply = queryResult.isClean
+            ? `Wallet ${target.slice(0, 8)}... looks clean — no risk flags found.`
+            : `⚠ Risk detected on ${target.slice(0, 8)}... — ${queryResult.flags.length} flags found.`;
+
+        } else {
+          // send / swap / compare — fetch all provider quotes
+          const token = intent.tokenIn || 'SOL';
+          const tokenOut = intent.tokenOut || token;
+          const amount = parseFloat(intent.amountIn || intent.amountUsd || '0') || 1;
+          const autoSelect = intent.autoSelect || 'lowest_fee';
+          const preferred = intent.preferredProvider || null;
+          queryResult = await getPrivacyRoutes({
+            tokenIn: token,
+            tokenOut,
+            amount,
+            recipient: intent.recipient,
+            autoSelect: preferred ? undefined : autoSelect as any,
+          });
+          // If user specified a provider, mark it as recommended
+          if (preferred) {
+            queryResult.providers = queryResult.providers.map((p: any) => ({ ...p, recommended: p.provider.toLowerCase().includes(preferred.toLowerCase()) }));
+            queryResult.recommended = preferred;
+          }
+          const rec = queryResult.providers.find((p: any) => p.recommended);
+          aiReply = preferred
+            ? `Routing ${amount} ${token} through ${preferred} — fee: ${rec?.feeUsd} ${token}, ETA: ${rec?.estimatedTime}.`
+            : `Found ${queryResult.providers.length} privacy routes. Lowest fee: ${rec?.provider} (${rec?.feePct}% — $${rec?.feeUsd}).`;
+        }
+
+        enrichedIntent = { ...intent, queryResult };
       }
 
       // ── Contact handler (client-side storage, just echo intent back) ────

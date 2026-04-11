@@ -370,6 +370,48 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
     )
   }
 
+  // ── Privacy cards ────────────────────────────────────────────────────────
+  if (qr.type === 'privacy_routes') {
+    return <PrivacyRouteCard qr={qr} intent={intent} userAddress={userAddress} />
+  }
+
+  if (qr.type === 'stealth_address') {
+    return (
+      <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.3)' }}>
+        <div className="px-3 py-2" style={{ backgroundColor: 'rgba(123,112,255,0.08)' }}>
+          <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>🔮 Stealth Address — Umbra Protocol</span>
+        </div>
+        <div className="px-3 py-2 space-y-1.5 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+          {qr.instructions?.map((step: string, i: number) => (
+            <div key={i} className="flex gap-2"><span style={{ color: '#7B70FF' }}>{i + 1}.</span><span style={{ color: 'var(--foreground)' }}>{step}</span></div>
+          ))}
+        </div>
+        <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>{qr.note}</div>
+        <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <a href={qr.umbraUrl} target="_blank" rel="noreferrer"
+            className="block w-full py-2 rounded-lg text-xs font-semibold text-center"
+            style={{ backgroundColor: 'rgba(123,112,255,0.15)', color: '#7B70FF' }}>
+            Open Umbra Protocol →
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  if (qr.type === 'wallet_screen') {
+    return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: `1px solid ${qr.isClean ? 'rgba(0,201,167,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+        <div className="flex justify-between mb-2">
+          <span className="font-semibold" style={{ color: 'var(--foreground)' }}>Wallet Screen — {qr.source}</span>
+          <span className="font-bold" style={{ color: qr.isClean ? '#00C9A7' : '#FF6B6B' }}>{qr.isClean ? '✓ Clean' : `⚠ ${qr.riskLevel?.toUpperCase()} RISK`}</span>
+        </div>
+        <div className="font-mono mb-2" style={{ color: '#7B70FF' }}>{qr.address?.slice(0, 20)}...</div>
+        {qr.flags?.length > 0 && <div className="space-y-1">{qr.flags.map((f: string, i: number) => <div key={i} style={{ color: '#FF6B6B' }}>⚠ {f.replace(/_/g, ' ')}</div>)}</div>}
+        {qr.flags?.length === 0 && <div style={{ color: '#999' }}>No risk flags found.</div>}
+      </div>
+    )
+  }
+
   // ── Contact cards ────────────────────────────────────────────────────────
   if (qr.type === 'contact_action') {
     return <ContactActionCard qr={qr} userAddress={userAddress} />
@@ -395,6 +437,99 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
   }
 
   return null
+}
+
+const PRIVACY_LEVEL_COLOR: Record<string, string> = { Maximum: '#FF6B6B', High: '#FFB347', Medium: '#7B70FF' }
+
+function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; userAddress?: string }) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const recipient = intent?.recipient ? resolveContact(userAddress || '', intent.recipient) : qr.recipient
+
+  const handleUse = (provider: any) => {
+    setSelected(provider.provider)
+    window.open(provider.url, '_blank')
+  }
+
+  return (
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+      {/* Header */}
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'var(--background)' }}>
+        <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+          🔒 Privacy Routes — {qr.amount} {qr.tokenIn}
+          {recipient && ` → ${intent?.recipient || recipient.slice(0, 8)}...`}
+        </span>
+        <span className="text-xs" style={{ color: '#999' }}>
+          {qr.autoSelect === 'lowest_fee' ? '⚡ Lowest fee selected' : qr.autoSelect === 'highest_privacy' ? '🛡 Max privacy selected' : '⏱ Fastest selected'}
+        </span>
+      </div>
+
+      {/* Column headers */}
+      <div className="px-3 py-1.5 grid grid-cols-5 text-xs font-medium" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
+        <span className="col-span-2">Provider</span>
+        <span className="text-center">Fee</span>
+        <span className="text-center">Privacy</span>
+        <span className="text-center">ETA</span>
+      </div>
+
+      {/* Provider rows */}
+      {qr.providers?.map((p: any) => (
+        <div
+          key={p.provider}
+          onClick={() => handleUse(p)}
+          className="px-3 py-2.5 grid grid-cols-5 items-center text-xs cursor-pointer transition-colors"
+          style={{
+            borderTop: '1px solid var(--border)',
+            backgroundColor: p.recommended ? 'rgba(0,201,167,0.06)' : selected === p.provider ? 'rgba(123,112,255,0.06)' : 'transparent',
+          }}
+        >
+          {/* Provider name + badge */}
+          <div className="col-span-2 flex items-center gap-1.5">
+            <span className="text-base leading-none">{p.icon}</span>
+            <div>
+              <div className="font-semibold flex items-center gap-1" style={{ color: 'var(--foreground)' }}>
+                {p.provider}
+                {p.recommended && (
+                  <span className="px-1 py-0.5 rounded text-[10px] font-bold" style={{ backgroundColor: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}>
+                    ✓ Best
+                  </span>
+                )}
+              </div>
+              <div style={{ color: '#999' }} className="text-[10px] truncate max-w-[110px]">{p.method}</div>
+            </div>
+          </div>
+
+          {/* Fee */}
+          <div className="text-center">
+            <div className="font-semibold" style={{ color: '#FFB347' }}>
+              {p.feePct === 0 ? 'Free' : `${p.feePct}%`}
+            </div>
+            <div style={{ color: '#999' }} className="text-[10px]">${p.feeUsd}</div>
+          </div>
+
+          {/* Privacy level */}
+          <div className="text-center">
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+              style={{ backgroundColor: `${PRIVACY_LEVEL_COLOR[p.privacyLevel]}20`, color: PRIVACY_LEVEL_COLOR[p.privacyLevel] }}>
+              {p.privacyLevel}
+            </span>
+          </div>
+
+          {/* ETA + button */}
+          <div className="text-center">
+            <div style={{ color: 'var(--foreground)' }}>{p.estimatedTime}</div>
+            <div style={{ color: '#7B70FF' }} className="text-[10px]">Use →</div>
+          </div>
+        </div>
+      ))}
+
+      {/* Recommended summary */}
+      {qr.recommended && (
+        <div className="px-3 py-2 text-xs flex items-center gap-1" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
+          <span>System selected <strong style={{ color: '#00C9A7' }}>{qr.recommended}</strong> as the best option. Click any row to open the provider.</span>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: string }) {

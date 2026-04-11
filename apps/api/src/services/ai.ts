@@ -54,9 +54,17 @@ CATEGORIES & COMMANDS:
 - "what did I spend on payments this month?" → payment, queryType: spending_summary
 
 6. PRIVACY (privacy)
-- "send ETH anonymously", "swap privately", "do a ZK private swap"
-- "generate stealth address", "check if wallet is flagged"
-- "enable privacy mode"
+- "send 0.1 SOL to hassan privately" → privacy, queryType: send, autoSelect: lowest_fee
+- "send privately using lowest fee" → privacy, queryType: send, autoSelect: lowest_fee
+- "use highest privacy to send" → privacy, queryType: send, autoSelect: highest_privacy
+- "send via Houdini" → privacy, queryType: send, preferredProvider: Houdini Swap
+- "send via Railgun" → privacy, queryType: send, preferredProvider: Railgun
+- "send via GhostPay" → privacy, queryType: send, preferredProvider: GhostPay
+- "show me privacy options for sending" → privacy, queryType: compare
+- "swap $1000 ETH to USDC privately" → privacy, queryType: swap
+- "generate a stealth address" → privacy, queryType: stealth_address
+- "check if this wallet is flagged: <address>" → privacy, queryType: screen_wallet
+- "is it safe to receive from <address>?" → privacy, queryType: screen_wallet
 
 7. AUTOMATION (automation)
 - "run a grid bot on ETH", "auto-compound yield weekly"
@@ -120,6 +128,8 @@ Response format:
   "contactName": null,
   "contactAddress": null,
   "scheduleDate": null,
+  "autoSelect": "lowest_fee|highest_privacy|fastest",
+  "preferredProvider": null,
   "clarificationNeeded": false,
   "clarificationQuestion": null
 }
@@ -169,6 +179,22 @@ Reply: Pulling your outbound payment summary for this month.
 User: "send hassan 0.1 SOL on april 15" / "send 0.1 SOL to azeem tomorrow"
 JSON: {"action":"payment","queryType":"scheduled","tokenIn":"SOL","amountIn":"0.1","recipient":"hassan","scheduleDate":"april 15","chain":"solana"}
 Reply: Scheduling 0.1 SOL to hassan on April 15 — I'll send it automatically when the date arrives.
+
+User: "send hassan 0.1 SOL privately" / "use lowest fee service to send 0.1 SOL to hassan privately"
+JSON: {"action":"privacy","queryType":"send","tokenIn":"SOL","amountIn":"0.1","recipient":"hassan","autoSelect":"lowest_fee","chain":"solana"}
+Reply: Comparing privacy providers — finding the lowest fee route for 0.1 SOL.
+
+User: "send via Railgun" / "use Railgun to send privately"
+JSON: {"action":"privacy","queryType":"send","tokenIn":"SOL","amountIn":"0.1","recipient":"hassan","preferredProvider":"Railgun","chain":"solana"}
+Reply: Routing through Railgun ZK shielded pool.
+
+User: "generate a stealth address"
+JSON: {"action":"privacy","queryType":"stealth_address","chain":"solana"}
+Reply: Generating a stealth receive address via Umbra Protocol.
+
+User: "is this wallet safe? 3Y4Rd..."
+JSON: {"action":"privacy","queryType":"screen_wallet","recipient":"3Y4Rd...","chain":"solana"}
+Reply: Screening wallet for risk flags via GoPlus.
 
 User: "save this address as hassan: 3Y4Rd..."
 JSON: {"action":"contact","queryType":"save","contactName":"hassan","contactAddress":"3Y4Rd..."}
