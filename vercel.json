@@ -1,8 +1,6 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd defi-copilot-web && npm run build",
   "devCommand": "cd defi-copilot-web && npm run dev",
   "installCommand": "cd defi-copilot-web && npm install",
-  "framework": null,
   "outputDirectory": "defi-copilot-web/.next"
 }

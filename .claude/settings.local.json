@@ -3,7 +3,21 @@
     "allow": [
       "Bash(npm --version)",
       "Bash(export PATH=\"/usr/local/bin:$PATH\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(ssh -i ~/.ssh/clawdbot_key root@107.189.19.244 \"pm2 list 2>/dev/null || echo 'pm2 not running'; echo '---'; ls /root 2>/dev/null || ls /home 2>/dev/null\")",
+      "Bash(ssh -i ~/.ssh/clawdbot_key root@107.189.19.244 \"ls /root/defi-copilot && cat /root/defi-copilot/apps/api/ecosystem.config.js 2>/dev/null || cat /root/defi-copilot/ecosystem.config.js 2>/dev/null\")",
+      "Bash(ssh -i ~/.ssh/clawdbot_key root@107.189.19.244 \"pm2 logs defi-api --lines 20 --nostream 2>&1\")",
+      "Bash(ssh -i ~/.ssh/clawdbot_key root@107.189.19.244 \"cat /root/defi-copilot/apps/api/.env 2>/dev/null | grep -v 'SECRET\\\\|KEY\\\\|PASS\\\\|TOKEN' || echo 'no .env or all sensitive'\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(rm /Users/hassanbashir/Desktop/Work/defi_copilot/.git/index.lock)",
+      "Bash(git push:*)",
+      "Bash(vercel --version)",
+      "Bash(npx vercel:*)",
+      "Read(//Users/hassanbashir/.config/vercel/**)",
+      "Read(//Users/hassanbashir/.vercel/**)",
+      "Read(//Users/hassanbashir/.config/**)",
+      "Read(//Users/hassanbashir/**)"
     ]
   }
 }
