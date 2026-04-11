@@ -5,6 +5,8 @@ import rateLimit from '@fastify/rate-limit';
 import { healthRoutes } from './routes/health';
 import { copilotRoutes } from './routes/copilot';
 import { quoteRoutes } from './routes/quote';
+import { ordersRoutes } from './routes/orders';
+import { priceRoutes } from './routes/price';
 
 const server = Fastify({
   logger: {
@@ -31,10 +33,22 @@ async function start() {
   await server.register(healthRoutes, { prefix: '/api' });
   await server.register(copilotRoutes, { prefix: '/api' });
   await server.register(quoteRoutes, { prefix: '/api' });
+  await server.register(ordersRoutes);
+  await server.register(priceRoutes, { prefix: '/api' });
+
+  // ─── Start Order Executor (Production Only) ───────────
+  if (process.env.NODE_ENV === 'production') {
+    const { getOrderExecutor } = await import('./services/orderExecutor');
+    getOrderExecutor();
+    console.log('🤖 Order executor started');
+  }
 
   // ─── Start ─────────────────────────────────────────────
   const port = Number(process.env.PORT ?? 3001);
   await server.listen({ port, host: '0.0.0.0' });
+  
+  console.log(`🚀 Server running on port ${port}`);
+  console.log(`📊 Orders monitoring: ${process.env.NODE_ENV === 'production' ? 'ACTIVE' : 'disabled (dev mode)'}`);
 }
 
 start().catch((err) => {

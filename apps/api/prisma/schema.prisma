@@ -17,6 +17,7 @@ model User {
   orders        Order[]
   alerts        PriceAlert[]
   conversations Conversation[]
+  automations   Automation[]
   
   @@index([walletAddress])
 }
@@ -126,4 +127,25 @@ model Transaction {
   @@index([txHash])
   @@index([status])
   @@index([createdAt])
+}
+
+model Automation {
+  id               String    @id @default(cuid())
+  userId           String
+  type             String    // "grid_bot" | "rebalance" | "dca" | "copy_trade" | "auto_compound" | "dip_buyer"
+  name             String?
+  status           String    @default("active") // "active" | "paused" | "stopped"
+  config           Json      // Strategy-specific configuration
+  lastExecutedAt   DateTime?
+  nextExecutionAt  DateTime?
+  executionCount   Int       @default(0)
+  profitLoss       String?
+  chain            String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, status])
+  @@index([status, nextExecutionAt])
 }

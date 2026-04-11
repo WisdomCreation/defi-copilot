@@ -1,0 +1,254 @@
+import { FastifyInstance } from 'fastify';
+import { z } from 'zod';
+import { prisma } from '../db/prisma';
+import { getOrderExecutor, orderQueue } from '../services/orderExecutor';
+
+const CreateOrderSchema = z.object({
+  userWallet: z.string(),
+  type: z.enum(['limit', 'stop_loss', 'take_profit', 'dca', 'bridge']),
+  tokenIn: z.string(),
+  tokenOut: z.string(),
+  amountIn: z.string(),
+  triggerPrice: z.string().optional(),
+  triggerCondition: z.enum(['above', 'below']).optional(),
+  chain: z.string(),
+  signedTx: z.string(),
+  dcaInterval: z.enum(['daily', 'weekly', 'monthly']).optional(),
+  dcaMaxExecutions: z.number().optional(),
+  executeAt: z.string().optional(), // ISO datetime for scheduled orders
+});
+
+const CancelOrderSchema = z.object({
+  orderId: z.string(),
+  userWallet: z.string(),
+});
+
+export async function ordersRoutes(fastify: FastifyInstance) {
+  /**
+   * Create a new order
+   */
+  fastify.post('/api/orders', async (request, reply) => {
+    try {
+      const data = CreateOrderSchema.parse(request.body);
+
+      // Find or create user
+      let user = await prisma.user.findUnique({
+        where: { walletAddress: data.userWallet },
+      });
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            walletAddress: data.userWallet,
+            chain: data.chain,
+          },
+        });
+      }
+
+      // Create order
+      const order = await prisma.order.create({
+        data: {
+          userId: user.id,
+          type: data.type,
+          tokenIn: data.tokenIn,
+          tokenOut: data.tokenOut,
+          amountIn: data.amountIn,
+          triggerPrice: data.triggerPrice,
+          triggerCondition: data.triggerCondition,
+          chain: data.chain,
+          signedTx: data.signedTx,
+          dcaInterval: data.dcaInterval,
+          dcaMaxExecutions: data.dcaMaxExecutions,
+          status: 'watching',
+        },
+      });
+
+      // If time-based execution, schedule it
+      if (data.executeAt) {
+        const executor = getOrderExecutor();
+        await executor.scheduleOrder(order.id, new Date(data.executeAt));
+      }
+
+      console.log(`✅ Order created: ${order.id} (${order.type})`);
+
+      return reply.send({
+        success: true,
+        order: {
+          id: order.id,
+          type: order.type,
+          tokenIn: order.tokenIn,
+          tokenOut: order.tokenOut,
+          amountIn: order.amountIn,
+          triggerPrice: order.triggerPrice,
+          status: order.status,
+          createdAt: order.createdAt,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      return reply.code(400).send({
+        error: error.message || 'Failed to create order',
+      });
+    }
+  });
+
+  /**
+   * List user's orders
+   */
+  fastify.get('/api/orders', async (request, reply) => {
+    try {
+      const { userWallet, status } = request.query as {
+        userWallet: string;
+        status?: string;
+      };
+
+      if (!userWallet) {
+        return reply.code(400).send({ error: 'userWallet required' });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { walletAddress: userWallet },
+      });
+
+      if (!user) {
+        return reply.send({ orders: [] });
+      }
+
+      const orders = await prisma.order.findMany({
+        where: {
+          userId: user.id,
+          ...(status && { status }),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+
+      return reply.send({ orders });
+    } catch (error: any) {
+      console.error('Error fetching orders:', error);
+      return reply.code(500).send({
+        error: 'Failed to fetch orders',
+      });
+    }
+  });
+
+  /**
+   * Get order details
+   */
+  fastify.get('/api/orders/:orderId', async (request, reply) => {
+    try {
+      const { orderId } = request.params as { orderId: string };
+
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          user: {
+            select: {
+              walletAddress: true,
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        return reply.code(404).send({ error: 'Order not found' });
+      }
+
+      return reply.send({ order });
+    } catch (error: any) {
+      console.error('Error fetching order:', error);
+      return reply.code(500).send({
+        error: 'Failed to fetch order',
+      });
+    }
+  });
+
+  /**
+   * Cancel an order
+   */
+  fastify.post('/api/orders/cancel', async (request, reply) => {
+    try {
+      const data = CancelOrderSchema.parse(request.body);
+
+      const order = await prisma.order.findUnique({
+        where: { id: data.orderId },
+        include: { user: true },
+      });
+
+      if (!order) {
+        return reply.code(404).send({ error: 'Order not found' });
+      }
+
+      // Verify ownership
+      if (order.user.walletAddress !== data.userWallet) {
+        return reply.code(403).send({ error: 'Unauthorized' });
+      }
+
+      // Cancel the order
+      const executor = getOrderExecutor();
+      await executor.cancelOrder(data.orderId);
+
+      return reply.send({
+        success: true,
+        message: 'Order cancelled successfully',
+      });
+    } catch (error: any) {
+      console.error('Error cancelling order:', error);
+      return reply.code(400).send({
+        error: error.message || 'Failed to cancel order',
+      });
+    }
+  });
+
+  /**
+   * Get order statistics
+   */
+  fastify.get('/api/orders/stats', async (request, reply) => {
+    try {
+      const { userWallet } = request.query as { userWallet: string };
+
+      if (!userWallet) {
+        return reply.code(400).send({ error: 'userWallet required' });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { walletAddress: userWallet },
+      });
+
+      if (!user) {
+        return reply.send({
+          stats: {
+            total: 0,
+            watching: 0,
+            filled: 0,
+            cancelled: 0,
+            failed: 0,
+          },
+        });
+      }
+
+      const [total, watching, filled, cancelled, failed] = await Promise.all([
+        prisma.order.count({ where: { userId: user.id } }),
+        prisma.order.count({ where: { userId: user.id, status: 'watching' } }),
+        prisma.order.count({ where: { userId: user.id, status: 'filled' } }),
+        prisma.order.count({ where: { userId: user.id, status: 'cancelled' } }),
+        prisma.order.count({ where: { userId: user.id, status: 'failed' } }),
+      ]);
+
+      return reply.send({
+        stats: {
+          total,
+          watching,
+          filled,
+          cancelled,
+          failed,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error fetching order stats:', error);
+      return reply.code(500).send({
+        error: 'Failed to fetch order stats',
+      });
+    }
+  });
+}

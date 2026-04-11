@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, Loader2 } from 'lucide-react'
+import { Send, Loader2, List } from 'lucide-react'
 import { SwapConfirmation } from './swap-confirmation'
+import { OrderPlacement } from './order-placement'
+import { OrderDashboard } from './order-dashboard'
 import { CopilotLogo } from './logo'
 
 interface Message {
@@ -18,8 +20,11 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingSwap, setPendingSwap] = useState<any>(null)
+  const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [jupiterQuote, setJupiterQuote] = useState<any>(null)
   const [conversationId, setConversationId] = useState<string | undefined>()
+  const [showOrderDashboard, setShowOrderDashboard] = useState(false)
+  const [currentPrice, setCurrentPrice] = useState<number | undefined>()
 
   const sendMessage = async () => {
     if (!input.trim() || loading || !address) return
@@ -70,7 +75,25 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
       }
       
       if (data.requiresConfirmation && data.intent) {
-        setPendingSwap(data.intent)
+        const action = data.intent.action
+        
+        // Determine if it's a swap or an order
+        if (action === 'swap') {
+          setPendingSwap(data.intent)
+        } else if (['limit', 'stop_loss', 'take_profit', 'dca'].includes(action)) {
+          setPendingOrder(data.intent)
+          
+          // Fetch current price for display
+          if (data.intent.tokenOut) {
+            try {
+              const priceResponse = await fetch(`/api/price/${data.intent.tokenOut}`)
+              const priceData = await priceResponse.json()
+              setCurrentPrice(priceData.price)
+            } catch (e) {
+              console.error('Failed to fetch price:', e)
+            }
+          }
+        }
       }
       
       setLoading(false)
@@ -235,6 +258,53 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
     }
   }
 
+  const handleOrderConfirm = async (orderData: any) => {
+    setLoading(true)
+    try {
+      // Create order on backend
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create order')
+      }
+
+      const data = await response.json()
+
+      // Success!
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `✅ **ORDER CREATED!**\n\n` +
+            `Your ${orderData.type.replace('_', ' ')} order is now active!\n\n` +
+            `**Order ID:** ${data.order.id}\n` +
+            `**Trade:** ${orderData.amountIn} ${orderData.tokenIn} → ${orderData.tokenOut}\n\n` +
+            `I'll monitor the market 24/7 and execute automatically when triggered. Check "My Orders" to track status.`,
+        },
+      ])
+
+      setPendingOrder(null)
+      setCurrentPrice(undefined)
+    } catch (error: any) {
+      console.error('Order creation error:', error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `Failed to create order: ${error.message || 'Unknown error'}`,
+        },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Good morning'
@@ -384,6 +454,21 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         </div>
       )}
 
+      {/* My Orders Button - Fixed Position */}
+      {address && messages.length > 0 && (
+        <button
+          onClick={() => setShowOrderDashboard(true)}
+          className="fixed bottom-24 right-6 p-4 rounded-full shadow-lg transition-all hover:scale-105"
+          style={{
+            backgroundColor: '#7B70FF',
+            color: '#fff',
+            border: '2px solid rgba(255,255,255,0.2)',
+          }}
+        >
+          <List className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Swap Confirmation Modal */}
       {pendingSwap && (
         <SwapConfirmation
@@ -394,6 +479,27 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
             setPendingSwap(null)
             setJupiterQuote(null)
           }}
+        />
+      )}
+
+      {/* Order Placement Modal */}
+      {pendingOrder && (
+        <OrderPlacement
+          intent={pendingOrder}
+          currentPrice={currentPrice}
+          onConfirm={handleOrderConfirm}
+          onCancel={() => {
+            setPendingOrder(null)
+            setCurrentPrice(undefined)
+          }}
+        />
+      )}
+
+      {/* Order Dashboard Modal */}
+      {showOrderDashboard && (
+        <OrderDashboard
+          userWallet={address}
+          onClose={() => setShowOrderDashboard(false)}
         />
       )}
     </div>
