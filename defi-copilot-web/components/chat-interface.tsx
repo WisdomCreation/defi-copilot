@@ -1234,6 +1234,18 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
   const sendMessage = async () => {
     if (!input.trim() || loading || !address) return
 
+    // Pre-resolve any contact names in the message to their wallet addresses
+    let resolvedMessage = input
+    if (address) {
+      const contacts = getContacts(address)
+      contacts.forEach(c => {
+        const nameRegex = new RegExp(`\\b${c.displayName}\\b`, 'gi')
+        if (nameRegex.test(resolvedMessage)) {
+          resolvedMessage = resolvedMessage.replace(nameRegex, c.address)
+        }
+      })
+    }
+
     const newMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -1251,7 +1263,7 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: input,
+          message: resolvedMessage,
           walletAddress: address,
           chain: chain || 'solana',
           conversationId: conversationId,
@@ -1280,6 +1292,20 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
               address: resolved[i]?.address || r.address,
               displayName: resolved[i]?.displayName || resolved[i]?.input || r.address,
             }))
+          }
+        }
+        data.intent = intent
+      }
+
+      // ── Resolve contact names in privacy intents ────────────────────────
+      if (data.intent?.action === 'privacy' && address) {
+        const intent = data.intent
+        if (intent.recipient) {
+          const resolved = resolveContact(address, intent.recipient)
+          intent.recipient = resolved
+          // If the backend got a name and failed, re-trigger with the resolved address
+          if (intent.queryResult?.type === 'privacy_routes' && resolved !== intent.recipient) {
+            intent.queryResult.recipient = resolved
           }
         }
         data.intent = intent
