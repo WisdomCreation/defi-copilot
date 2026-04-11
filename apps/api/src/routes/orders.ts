@@ -32,7 +32,7 @@ const JupiterCreateOrderSchema = z.object({
   maker: z.string(),
   makingAmount: z.string(),
   takingAmount: z.string(),
-  expiredAt: z.string().nullable().optional(),
+  expiredAt: z.union([z.string(), z.null()]).optional(),
 });
 
 export async function ordersRoutes(fastify: FastifyInstance) {
@@ -43,9 +43,21 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     try {
       const body = JupiterCreateOrderSchema.parse(request.body);
 
+      // Strip expiredAt if null - Jupiter doesn't want null
+      const jupiterBody: any = {
+        inputMint: body.inputMint,
+        outputMint: body.outputMint,
+        maker: body.maker,
+        makingAmount: body.makingAmount,
+        takingAmount: body.takingAmount,
+      };
+      if (body.expiredAt) jupiterBody.expiredAt = body.expiredAt;
+
+      console.log('Calling Jupiter createOrder:', JSON.stringify(jupiterBody));
+
       const { data } = await axios.post(
         'https://api.jup.ag/trigger/v1/createOrder',
-        body,
+        jupiterBody,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -57,9 +69,14 @@ export async function ordersRoutes(fastify: FastifyInstance) {
         }
       );
 
+      console.log('Jupiter createOrder success, order key:', data?.order);
       return reply.send(data);
     } catch (error: any) {
-      const errMsg = error?.response?.data?.error || error?.response?.data || error.message || 'Jupiter API error';
+      // Serialize error properly
+      const jupiterErr = error?.response?.data;
+      const errMsg = typeof jupiterErr === 'string'
+        ? jupiterErr
+        : jupiterErr?.error || jupiterErr?.message || JSON.stringify(jupiterErr) || error.message || 'Jupiter API error';
       console.error('Jupiter createOrder proxy error:', errMsg);
       return reply.code(502).send({ error: errMsg });
     }

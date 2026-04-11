@@ -102,7 +102,8 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
 
       if (!response.ok) {
         const err = await response.json()
-        throw new Error(err.error || `Jupiter API error: ${response.status}`)
+        const errMsg = typeof err.error === 'string' ? err.error : JSON.stringify(err.error || err)
+        throw new Error(errMsg || `Jupiter API error: ${response.status}`)
       }
 
       const { transaction, order } = await response.json()
