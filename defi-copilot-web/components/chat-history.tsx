@@ -16,9 +16,11 @@ interface ChatHistoryProps {
   currentSection?: string
   onNewChat?: () => void
   userAddress?: string
+  onSelectConversation?: (sessionKey: string) => void
+  activeSessionKey?: string
 }
 
-export function ChatHistory({ onNavigate, currentSection = 'chats', onNewChat, userAddress }: ChatHistoryProps) {
+export function ChatHistory({ onNavigate, currentSection = 'chats', onNewChat, userAddress, onSelectConversation, activeSessionKey }: ChatHistoryProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
 
   // Load conversation history from localStorage
@@ -151,10 +153,14 @@ export function ChatHistory({ onNavigate, currentSection = 'chats', onNewChat, u
             {conversations.map((conv) => (
               <button
                 key={conv.id}
+                onClick={() => { onSelectConversation?.(conv.id); onNavigate?.('chats') }}
                 className="w-full text-left px-3 py-2 rounded-lg transition-colors text-sm"
-                style={{ color: 'var(--foreground)' }}
+                style={{
+                  color: 'var(--foreground)',
+                  backgroundColor: activeSessionKey === conv.id ? 'var(--hover)' : 'transparent'
+                }}
                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = activeSessionKey === conv.id ? 'var(--hover)' : 'transparent'}
               >
                 <div className="truncate">{conv.title}</div>
               </button>

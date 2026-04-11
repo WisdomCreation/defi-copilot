@@ -69,7 +69,7 @@ interface Message {
   requiresConfirmation?: boolean
 }
 
-export function ChatInterface({ address, chain }: { address?: string; chain?: string }) {
+export function ChatInterface({ address, chain, initialSessionKey }: { address?: string; chain?: string; initialSessionKey?: string }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -78,23 +78,18 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   const [jupiterQuote, setJupiterQuote] = useState<any>(null)
   const [conversationId, setConversationId] = useState<string | undefined>()
   const [currentPrice, setCurrentPrice] = useState<number | undefined>()
-  // Each mount gets a unique session key so New Chat starts fresh
-  const [sessionKey] = useState(() => `session_${Date.now()}`)
+  // If restoring a session use its key, otherwise create a fresh one
+  const [sessionKey] = useState(() => initialSessionKey || `session_${Date.now()}`)
 
-  // Load the most recent session messages on mount (only if no prior session)
+  // Load messages if restoring an old session
   useEffect(() => {
-    if (address) {
-      const lastSession = localStorage.getItem(`last_session_${address}`)
-      if (lastSession) {
-        const savedMessages = localStorage.getItem(`chat_${address}_${lastSession}`)
-        if (savedMessages) {
-          try {
-            setMessages(JSON.parse(savedMessages))
-          } catch {}
-        }
+    if (initialSessionKey && address) {
+      const saved = localStorage.getItem(`chat_${address}_${initialSessionKey}`)
+      if (saved) {
+        try { setMessages(JSON.parse(saved)) } catch {}
       }
     }
-  }, [address])
+  }, [initialSessionKey, address])
 
   // Auto-save messages to this session's key
   useEffect(() => {
@@ -192,13 +187,29 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         requiresConfirmation: data.requiresConfirmation,
       }
 
+      // Handle cancel_order — show inline cancel cards instead of plain text
+      if (data.intent?.action === 'cancel_order') {
+        const activeOrders = data.intent?.activeOrders || []
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `cancel-cards-${Date.now()}`,
+            role: 'assistant',
+            content: data.reply,
+            cancelOrders: activeOrders,
+          },
+        ])
+        setLoading(false)
+        return
+      }
+
       setMessages((prev) => [...prev, aiMessage])
       
       // Save conversation ID for future messages
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId)
       }
-      
+
       if (data.requiresConfirmation && data.intent) {
         const action = data.intent.action
         
@@ -239,24 +250,6 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
             } catch (e) {
               console.error('Failed to fetch price:', e)
             }
-          }
-        } else if (action === 'cancel_order') {
-          const activeOrders = data.intent?.activeOrders || []
-          if (activeOrders.length === 0) {
-            // reply already set to "no active orders"
-          } else {
-            // Append cancel cards as a special message
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `cancel-cards-${Date.now()}`,
-                role: 'assistant',
-                content: data.reply,
-                cancelOrders: activeOrders,
-              },
-            ])
-            setLoading(false)
-            return
           }
         }
       }

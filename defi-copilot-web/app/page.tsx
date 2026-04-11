@@ -13,6 +13,7 @@ export default function Home() {
   const [currentSection, setCurrentSection] = useState('chats')
   const [chatKey, setChatKey] = useState(0)
   const [solanaAddress, setSolanaAddress] = useState<string | undefined>()
+  const [activeSessionKey, setActiveSessionKey] = useState<string | undefined>()
   
   const chainName = chain?.name.toLowerCase() || 'ethereum'
 
@@ -43,7 +44,13 @@ export default function Home() {
   }, [])
 
   const handleNewChat = () => {
+    setActiveSessionKey(undefined) // clear selected session → fresh chat
     setChatKey(prev => prev + 1)
+  }
+
+  const handleSelectConversation = (sessionKey: string) => {
+    setActiveSessionKey(sessionKey)
+    setChatKey(prev => prev + 1) // remount ChatInterface with new session
   }
 
   return (
@@ -55,6 +62,8 @@ export default function Home() {
           currentSection={currentSection}
           onNewChat={handleNewChat}
           userAddress={solanaAddress || address}
+          onSelectConversation={handleSelectConversation}
+          activeSessionKey={activeSessionKey}
         />
       </div>
 
@@ -67,7 +76,7 @@ export default function Home() {
 
         {/* Content based on selected section */}
         {currentSection === 'chats' && (
-          <ChatInterface key={chatKey} address={solanaAddress || address} chain={chainName} />
+          <ChatInterface key={chatKey} address={solanaAddress || address} chain={chainName} initialSessionKey={activeSessionKey} />
         )}
         
         {currentSection === 'trades' && (
