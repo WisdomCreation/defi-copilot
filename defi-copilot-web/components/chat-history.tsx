@@ -23,8 +23,7 @@ interface ChatHistoryProps {
 export function ChatHistory({ onNavigate, currentSection = 'chats', onNewChat, userAddress, onSelectConversation, activeSessionKey }: ChatHistoryProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
 
-  // Load conversation history from localStorage
-  useEffect(() => {
+  const loadConversations = () => {
     if (userAddress) {
       const savedConversations = localStorage.getItem(`conversations_${userAddress}`)
       if (savedConversations) {
@@ -34,6 +33,23 @@ export function ChatHistory({ onNavigate, currentSection = 'chats', onNewChat, u
           console.error('Failed to load conversations:', error)
         }
       }
+    }
+  }
+
+  // Load on mount and when address changes
+  useEffect(() => {
+    loadConversations()
+  }, [userAddress])
+
+  // Re-read whenever any localStorage key changes (new chat saved)
+  useEffect(() => {
+    const handleStorage = () => loadConversations()
+    window.addEventListener('storage', handleStorage)
+    // Also poll every 2s so same-tab updates are caught
+    const interval = setInterval(loadConversations, 2000)
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      clearInterval(interval)
     }
   }, [userAddress])
 
