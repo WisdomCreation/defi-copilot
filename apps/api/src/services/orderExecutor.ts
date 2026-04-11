@@ -53,7 +53,7 @@ export class OrderExecutor {
    * Any order that is no longer open has been filled → update our DB.
    */
   private async syncJupiterOrderStatuses() {
-    const watchingOrders = await prisma.order.findMany({
+    const watchingOrders = await (prisma.order.findMany as any)({
       where: {
         status: 'watching',
         jupiterOrderKey: { not: null },
@@ -101,8 +101,8 @@ export class OrderExecutor {
     walletAddress: string
   ): Promise<Set<string>> {
     try {
-      const { data } = await axios.get(`${JUPITER_API}/limit/v2/openOrders`, {
-        params: { wallet: walletAddress },
+      const { data } = await axios.get(`${JUPITER_API}/trigger/v1/getTriggerOrders`, {
+        params: { user: walletAddress, orderStatus: 'active' },
         timeout: 10_000,
         headers: process.env.JUPITER_API_KEY
           ? { 'x-api-key': process.env.JUPITER_API_KEY }
@@ -110,9 +110,8 @@ export class OrderExecutor {
       });
 
       const orders: any[] = Array.isArray(data) ? data : data?.orders ?? [];
-      // Jupiter may return publicKey or account depending on version
       return new Set(
-        orders.map((o) => o.publicKey ?? o.orderKey ?? o.account).filter(Boolean)
+        orders.map((o) => o.orderKey ?? o.publicKey ?? o.account).filter(Boolean)
       );
     } catch (err: any) {
       console.error(
@@ -135,8 +134,8 @@ export class OrderExecutor {
     walletAddress: string
   ): Promise<string> {
     const { data } = await axios.post(
-      `${JUPITER_API}/limit/v2/cancelOrders`,
-      { maker: walletAddress, orders: [jupiterOrderKey] },
+      `${JUPITER_API}/trigger/v1/cancelOrder`,
+      { maker: walletAddress, order: jupiterOrderKey },
       {
         headers: process.env.JUPITER_API_KEY
           ? { 'x-api-key': process.env.JUPITER_API_KEY }
