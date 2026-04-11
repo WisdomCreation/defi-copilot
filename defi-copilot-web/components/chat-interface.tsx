@@ -525,7 +525,7 @@ function PrivacyRouteCard({ qr, intent, userAddress }: { qr: any; intent: any; u
       {/* Recommended summary */}
       {qr.recommended && (
         <div className="px-3 py-2 text-xs flex items-center gap-1" style={{ borderTop: '1px solid var(--border)', color: '#999' }}>
-          <span>System selected <strong style={{ color: '#00C9A7' }}>{qr.recommended}</strong> as the best option. Click any row to open the provider.</span>
+          <span>System selected <strong style={{ color: '#00C9A7' }}>{qr.recommended}</strong> as best. Click any row to open the provider — you will sign there.</span>
         </div>
       )}
     </div>
@@ -636,7 +636,7 @@ function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: stri
         <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{entry.toDisplay}</span></div>
         <div className="flex justify-between"><span style={{ color: '#999' }}>Amount</span><span style={{ color: 'var(--foreground)' }}>{entry.amount} {entry.token}</span></div>
         <div className="flex justify-between"><span style={{ color: '#999' }}>Send date</span><span style={{ color: '#7B70FF' }}>{entry.label}</span></div>
-        <div className="flex justify-between"><span style={{ color: '#999' }}>Status</span><span style={{ color: '#00C9A7' }}>Pending — will auto-send when app is open</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Status</span><span style={{ color: '#FFB347' }}>⏳ Phantom will prompt you to sign on {entry.label}</span></div>
       </div>
       <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
         <button

@@ -380,7 +380,7 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
           } else {
             const preview = await buildPaymentPreview({ fromWallet: walletAddress, recipient, token, amount, memo: intent.memo });
             queryResult = { ...preview, type: 'scheduled_payment_preview', scheduleDate: intent.scheduleDate || '' };
-            aiReply = `Scheduled: ${amount} ${token.toUpperCase()} to ${preview.toDisplay} on ${intent.scheduleDate || 'the specified date'}. I'll send it automatically when the date arrives.`;
+            aiReply = `Scheduled: ${amount} ${token.toUpperCase()} to ${preview.toDisplay} on ${intent.scheduleDate || 'the specified date'}. When the date arrives and the app is open, Phantom will prompt you to sign and confirm the send.`;
           }
 
         } else if (qt === 'direct' || qt === 'crossborder' || qt === 'swap_send' || qt === 'private') {
