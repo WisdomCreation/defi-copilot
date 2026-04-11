@@ -29,7 +29,7 @@ const CancelOrderSchema = z.object({
 const JupiterCreateOrderSchema = z.object({
   inputMint: z.string(),
   outputMint: z.string(),
-  maker: z.string(),
+  maker: z.string(),  // user's wallet
   makingAmount: z.string(),
   takingAmount: z.string(),
   expiredAt: z.union([z.string(), z.null()]).optional(),
@@ -43,15 +43,18 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     try {
       const body = JupiterCreateOrderSchema.parse(request.body);
 
-      // Strip expiredAt if null - Jupiter doesn't want null
+      // Jupiter Trigger V1 requires payer + params wrapper
       const jupiterBody: any = {
         inputMint: body.inputMint,
         outputMint: body.outputMint,
         maker: body.maker,
-        makingAmount: body.makingAmount,
-        takingAmount: body.takingAmount,
+        payer: body.maker, // same as maker
+        params: {
+          makingAmount: body.makingAmount,
+          takingAmount: body.takingAmount,
+          ...(body.expiredAt ? { expiredAt: body.expiredAt } : {}),
+        },
       };
-      if (body.expiredAt) jupiterBody.expiredAt = body.expiredAt;
 
       console.log('Calling Jupiter createOrder:', JSON.stringify(jupiterBody));
 
