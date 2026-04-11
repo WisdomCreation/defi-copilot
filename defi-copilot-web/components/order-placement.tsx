@@ -46,33 +46,107 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
     setLoading(true)
     try {
       const phantom = (window as any).phantom?.solana
-      if (!phantom) {
-        throw new Error('Phantom wallet not found')
+      if (!phantom) throw new Error('Phantom wallet not found')
+      if (!phantom.isConnected) await phantom.connect()
+
+      const TOKEN_MINTS: Record<string, string> = {
+        SOL: 'So11111111111111111111111111111111111111112',
+        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
       }
 
-      if (!phantom.isConnected) {
-        await phantom.connect()
+      const inputToken = intent.tokenIn?.toUpperCase() || 'USDC'
+      const outputToken = intent.tokenOut?.toUpperCase() || 'SOL'
+      const inputMint = TOKEN_MINTS[inputToken]
+      const outputMint = TOKEN_MINTS[outputToken]
+
+      if (!inputMint || !outputMint) throw new Error(`Unsupported token pair: ${inputToken}/${outputToken}`)
+
+      const inputDecimals = inputToken === 'SOL' ? 9 : 6
+      const outputDecimals = outputToken === 'SOL' ? 9 : 6
+
+      const amountValue = parseFloat(intent.amountIn || intent.amountUsd || '0')
+      const makingAmount = Math.floor(amountValue * Math.pow(10, inputDecimals)).toString()
+
+      // Calculate takingAmount from trigger price
+      // e.g. sell 8 USDC, want SOL at $95 → takingAmount = 8/95 SOL = 0.0842 SOL
+      const triggerPrice = parseFloat(intent.triggerPrice || '0')
+      if (!triggerPrice) throw new Error('Trigger price is required')
+
+      let takingAmount: string
+      if (inputToken === 'USDC' || inputToken === 'USDT') {
+        // Buying SOL: makingAmount USDC → takingAmount SOL
+        const solAmount = amountValue / triggerPrice
+        takingAmount = Math.floor(solAmount * Math.pow(10, outputDecimals)).toString()
+      } else {
+        // Selling SOL: makingAmount SOL → takingAmount USDC
+        const usdcAmount = amountValue * triggerPrice
+        takingAmount = Math.floor(usdcAmount * Math.pow(10, outputDecimals)).toString()
       }
 
-      // For limit/stop_loss/take_profit/dca orders:
-      // We do NOT pre-sign a transaction. Jupiter quotes expire in seconds.
-      // Instead, we just store the order intent. When the price triggers,
-      // the backend will notify the user to sign a fresh transaction.
+      console.log('🎯 Creating Jupiter Trigger Order...', { inputMint, outputMint, makingAmount, takingAmount })
+
+      // Step 1: Get transaction from Jupiter Trigger API
+      const response = await fetch('https://api.jup.ag/trigger/v1/createOrder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_JUPITER_API_KEY || '',
+        },
+        body: JSON.stringify({
+          inputMint,
+          outputMint,
+          maker: phantom.publicKey.toString(),
+          makingAmount,
+          takingAmount,
+          expiredAt: null, // No expiry
+        }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || `Jupiter API error: ${response.status}`)
+      }
+
+      const { transaction, order } = await response.json()
+
+      // Step 2: User signs the transaction with Phantom
+      const { VersionedTransaction, Connection } = await import('@solana/web3.js')
+      const txBuffer = Buffer.from(transaction, 'base64')
+      const tx = VersionedTransaction.deserialize(txBuffer)
+
+      console.log('🔐 Requesting signature from Phantom...')
+      const signedTx = await phantom.signTransaction(tx)
+
+      // Step 3: Broadcast to Solana network
+      const connection = new Connection(
+        process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com'
+      )
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3,
+      })
+
+      console.log('✅ Jupiter limit order placed on-chain:', signature)
+      console.log('📋 Order key:', order)
+
+      // Step 4: Save to our backend for tracking
       const orderData = {
         userWallet: phantom.publicKey.toString(),
         type: intent.action,
-        tokenIn: intent.tokenIn || 'USDC',
-        tokenOut: intent.tokenOut || 'SOL',
-        amountIn: intent.amountIn || intent.amountUsd || '0',
+        tokenIn: inputToken,
+        tokenOut: outputToken,
+        amountIn: amountValue.toString(),
         triggerPrice: intent.triggerPrice,
         triggerCondition: intent.triggerCondition,
-        chain: intent.chain || 'solana',
-        signedTx: null, // No pre-signed tx - will execute fresh when triggered
+        chain: 'solana',
+        signedTx: null,
+        jupiterOrderKey: order, // Store Jupiter's order key for tracking
+        txHash: signature,
         dcaInterval: intent.dcaInterval,
         dcaMaxExecutions: intent.dcaCount,
       }
 
-      console.log('📝 Creating order intent (no pre-signing):', orderData)
       onConfirm(orderData)
     } catch (error: any) {
       console.error('Order creation error:', error)
@@ -177,13 +251,13 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
               How it works:
             </div>
             <div style={{ color: '#999' }}>
-              1. You sign the transaction once (right now)
+              1. Sign once now → order placed on Solana blockchain
               <br />
-              2. We monitor the price 24/7 on our server
+              2. Jupiter's keepers monitor price 24/7
               <br />
-              3. When triggered, we execute automatically
+              3. Auto-executes when price hits target
               <br />
-              4. You get notified when it fills
+              4. No second signature needed
             </div>
           </div>
         </div>
@@ -197,7 +271,7 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
             <div className="font-medium mb-1" style={{ color: 'var(--foreground)' }}>
               🔒 Security
             </div>
-            Your signed transaction is locked to this exact trade. We cannot modify the destination or amount.
+            Order is placed on-chain via Jupiter. Only you can cancel it. Auto-executes when price triggers.
           </div>
         </div>
 
@@ -228,7 +302,7 @@ export function OrderPlacement({ intent, onConfirm, onCancel, currentPrice }: Or
               if (!loading) e.currentTarget.style.opacity = '1'
             }}
           >
-            {loading ? 'Signing...' : 'Sign & Create Order'}
+            {loading ? 'Placing Order...' : 'Sign & Place Order'}
           </button>
         </div>
       </div>

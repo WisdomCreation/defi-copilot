@@ -37,6 +37,7 @@ model Order {
   status           String    @default("watching") // "watching" | "filled" | "cancelled" | "failed"
   signedTx         String?   @db.Text
   txHash           String?
+  jupiterOrderKey  String?
   chain            String
   bridgeTargetChain String?
   dcaInterval      String?   // "daily" | "weekly" | "monthly"

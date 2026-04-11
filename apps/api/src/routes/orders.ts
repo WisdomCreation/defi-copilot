@@ -13,9 +13,11 @@ const CreateOrderSchema = z.object({
   triggerCondition: z.enum(['above', 'below']).optional(),
   chain: z.string(),
   signedTx: z.string().nullable().optional(),
+  jupiterOrderKey: z.string().nullable().optional(),
+  txHash: z.string().nullable().optional(),
   dcaInterval: z.enum(['daily', 'weekly', 'monthly']).optional(),
   dcaMaxExecutions: z.number().optional(),
-  executeAt: z.string().optional(), // ISO datetime for scheduled orders
+  executeAt: z.string().optional(),
 });
 
 const CancelOrderSchema = z.object({
@@ -58,6 +60,7 @@ export async function ordersRoutes(fastify: FastifyInstance) {
           triggerCondition: data.triggerCondition,
           chain: data.chain,
           signedTx: data.signedTx,
+          txHash: data.txHash,
           dcaInterval: data.dcaInterval,
           dcaMaxExecutions: data.dcaMaxExecutions,
           status: 'watching',
