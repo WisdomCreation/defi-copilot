@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { X } from 'lucide-react'
 
 interface SwapConfirmationProps {
@@ -12,12 +11,23 @@ interface SwapConfirmationProps {
     amountUsd?: string
     chain?: string
   }
+  jupiterQuote?: any
   onConfirm: (alwaysAllow: boolean) => void
   onCancel: () => void
 }
 
-export function SwapConfirmation({ swap, onConfirm, onCancel }: SwapConfirmationProps) {
-  const [alwaysAllow, setAlwaysAllow] = useState(false)
+export function SwapConfirmation({ swap, jupiterQuote, onConfirm, onCancel }: SwapConfirmationProps) {
+
+  // Calculate values from Jupiter quote
+  const outputAmount = jupiterQuote 
+    ? (parseFloat(jupiterQuote.outAmount) / 1e6).toFixed(2) // USDC has 6 decimals
+    : '...'
+  
+  const networkFee = jupiterQuote?.platformFee
+    ? `$${(parseFloat(jupiterQuote.platformFee.amount) / 1e9 * 170).toFixed(2)}` // Estimate SOL price
+    : '~$0.01'
+  
+  const displayChain = swap.chain || 'solana'
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onCancel}>
@@ -47,35 +57,24 @@ export function SwapConfirmation({ swap, onConfirm, onCancel }: SwapConfirmation
           <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--hover)' }}>
             <div className="text-sm mb-1" style={{ color: '#999' }}>You'll receive</div>
             <div className="text-2xl font-semibold" style={{ color: '#FFFFFF' }}>
-              ~ {swap.estimatedOutput || '...'} {swap.tokenOut}
+              ~ {outputAmount} {swap.tokenOut}
             </div>
           </div>
 
           <div className="text-xs space-y-1" style={{ color: '#999' }}>
-            <div>Chain: {swap.chain}</div>
-            <div>Network fee: ~$2-5</div>
+            <div>Chain: {displayChain}</div>
+            <div>Network fee: {networkFee}</div>
+            {jupiterQuote && (
+              <div>Price impact: {(jupiterQuote.priceImpactPct * 100).toFixed(2)}%</div>
+            )}
           </div>
         </div>
 
-        <div className="mb-6">
-          <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-colors" style={{ backgroundColor: 'var(--hover)' }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--background)'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-          >
-            <input
-              type="checkbox"
-              checked={alwaysAllow}
-              onChange={(e) => setAlwaysAllow(e.target.checked)}
-              className="w-4 h-4 rounded"
-              style={{ accentColor: '#FFFFFF' }}
-            />
-            <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Always allow transactions</div>
-              <div className="text-xs" style={{ color: '#999' }}>
-                No signature needed for future swaps (you can revoke anytime)
-              </div>
-            </div>
-          </label>
+        <div className="mb-6 p-3 rounded-lg" style={{ backgroundColor: 'var(--hover)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="text-xs" style={{ color: '#999' }}>
+            <div className="font-medium mb-1" style={{ color: 'var(--foreground)' }}>🔒 Security Notice</div>
+            Every transaction requires your signature for your security. No wallet can auto-approve spending your funds.
+          </div>
         </div>
 
         <div className="flex gap-3">
@@ -89,13 +88,13 @@ export function SwapConfirmation({ swap, onConfirm, onCancel }: SwapConfirmation
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(alwaysAllow)}
+            onClick={() => onConfirm(false)}
             className="flex-1 px-4 py-2 rounded-lg transition-colors font-medium text-sm"
             style={{ backgroundColor: '#FFFFFF', color: '#000000' }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#E0E0E0'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
           >
-            {alwaysAllow ? 'Sign & Always Allow' : 'Sign Once'}
+            Confirm Swap
           </button>
         </div>
       </div>

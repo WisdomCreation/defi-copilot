@@ -18,6 +18,7 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingSwap, setPendingSwap] = useState<any>(null)
+  const [jupiterQuote, setJupiterQuote] = useState<any>(null)
   const [conversationId, setConversationId] = useState<string | undefined>()
 
   const sendMessage = async () => {
@@ -158,6 +159,9 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
       }
       
       console.log('✅ Jupiter quote received:', quote)
+      
+      // Store quote for display
+      setJupiterQuote(quote)
       
       // Get swap transaction
       const swapResult = await jupiterApi.swapPost({
@@ -384,8 +388,12 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
       {pendingSwap && (
         <SwapConfirmation
           swap={pendingSwap}
+          jupiterQuote={jupiterQuote}
           onConfirm={handleSwapConfirm}
-          onCancel={() => setPendingSwap(null)}
+          onCancel={() => {
+            setPendingSwap(null)
+            setJupiterQuote(null)
+          }}
         />
       )}
     </div>
