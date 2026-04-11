@@ -144,11 +144,13 @@ export class OrderExecutor {
       }
     );
 
-    if (!data?.tx) {
-      throw new Error('Jupiter did not return a cancel transaction');
+    // Jupiter Trigger V1 returns 'transaction' field
+    const txBase64 = data?.transaction ?? data?.tx;
+    if (!txBase64) {
+      throw new Error(`Jupiter did not return a cancel transaction. Response: ${JSON.stringify(data)}`);
     }
 
-    return data.tx; // base64 unsigned VersionedTransaction
+    return txBase64; // base64 unsigned VersionedTransaction
   }
 
   /**
