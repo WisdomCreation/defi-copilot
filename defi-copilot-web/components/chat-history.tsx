@@ -13,9 +13,10 @@ interface Conversation {
 interface ChatHistoryProps {
   onNavigate?: (section: string) => void
   currentSection?: string
+  onClearHistory?: () => void
 }
 
-export function ChatHistory({ onNavigate, currentSection = 'chats' }: ChatHistoryProps) {
+export function ChatHistory({ onNavigate, currentSection = 'chats', onClearHistory }: ChatHistoryProps) {
   const conversations: Conversation[] = []
 
   return (
@@ -29,6 +30,7 @@ export function ChatHistory({ onNavigate, currentSection = 'chats' }: ChatHistor
       {/* New Chat Button */}
       <div className="px-3 mb-4">
         <button 
+          onClick={onClearHistory}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm"
           style={{ 
             backgroundColor: 'transparent',

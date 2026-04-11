@@ -10,8 +10,16 @@ import { OrderDashboard } from '@/components/order-dashboard'
 export default function Home() {
   const { address, chain } = useAccount()
   const [currentSection, setCurrentSection] = useState('chats')
+  const [chatKey, setChatKey] = useState(0) // Force re-render of chat interface
   
   const chainName = chain?.name.toLowerCase() || 'ethereum'
+
+  const handleClearHistory = () => {
+    if (address && confirm('Are you sure you want to clear your chat history?')) {
+      localStorage.removeItem(`chat_history_${address}`)
+      setChatKey(prev => prev + 1) // Force chat interface to re-mount
+    }
+  }
 
   return (
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
@@ -20,6 +28,7 @@ export default function Home() {
         <ChatHistory 
           onNavigate={setCurrentSection}
           currentSection={currentSection}
+          onClearHistory={handleClearHistory}
         />
       </div>
 
@@ -32,7 +41,7 @@ export default function Home() {
 
         {/* Content based on selected section */}
         {currentSection === 'chats' && (
-          <ChatInterface address={address} chain={chainName} />
+          <ChatInterface key={chatKey} address={address} chain={chainName} />
         )}
         
         {currentSection === 'trades' && address && (

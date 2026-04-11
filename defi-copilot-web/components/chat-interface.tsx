@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Send, Loader2 } from 'lucide-react'
 import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
@@ -23,6 +23,65 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   const [jupiterQuote, setJupiterQuote] = useState<any>(null)
   const [conversationId, setConversationId] = useState<string | undefined>()
   const [currentPrice, setCurrentPrice] = useState<number | undefined>()
+
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    if (address) {
+      const savedMessages = localStorage.getItem(`chat_history_${address}`)
+      if (savedMessages) {
+        try {
+          setMessages(JSON.parse(savedMessages))
+        } catch (error) {
+          console.error('Failed to load chat history:', error)
+        }
+      }
+    }
+  }, [address])
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (address && messages.length > 0) {
+      try {
+        localStorage.setItem(`chat_history_${address}`, JSON.stringify(messages))
+      } catch (error) {
+        console.error('Failed to save chat history:', error)
+      }
+    }
+  }, [messages, address])
+
+  const fetchSwapQuote = async (intent: any) => {
+    try {
+      const { createJupiterApiClient } = await import('@jup-ag/api')
+      const jupiterApi = createJupiterApiClient()
+      
+      const TOKEN_MINTS: Record<string, string> = {
+        SOL: 'So11111111111111111111111111111111111111112',
+        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      }
+      
+      const inputMint = TOKEN_MINTS[intent.tokenIn?.toUpperCase() || 'SOL']
+      const outputMint = TOKEN_MINTS[intent.tokenOut?.toUpperCase() || 'USDC']
+      const inputToken = intent.tokenIn?.toUpperCase() || 'SOL'
+      const decimals = inputToken === 'SOL' ? 9 : 6
+      const amount = Math.floor(parseFloat(intent.amountIn || intent.amountUsd || '0.01') * Math.pow(10, decimals))
+      
+      console.log('📊 Fetching Jupiter quote...', { inputMint, outputMint, amount })
+      
+      const quote = await jupiterApi.quoteGet({
+        inputMint,
+        outputMint,
+        amount,
+        slippageBps: 50,
+      })
+      
+      if (quote) {
+        console.log('✅ Quote received:', quote)
+        setJupiterQuote(quote)
+      }
+    } catch (error) {
+      console.error('Failed to fetch quote:', error)
+    }
+  }
 
   const sendMessage = async () => {
     if (!input.trim() || loading || !address) return
@@ -77,6 +136,28 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         
         // Determine if it's a swap or an order
         if (action === 'swap') {
+          // Validate minimum amount
+          const amountValue = parseFloat(data.intent.amountIn || data.intent.amountUsd || '0')
+          const inputToken = data.intent.tokenIn?.toUpperCase() || 'SOL'
+          
+          // Minimum amounts: 0.01 SOL or 1 USDC
+          const minimumAmount = inputToken === 'SOL' ? 0.01 : 1
+          
+          if (amountValue < minimumAmount) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `⚠️ **Minimum Amount Required**\n\nThe minimum swap amount is:\n- **${minimumAmount} ${inputToken}**\n\nYou tried to swap **${amountValue} ${inputToken}**. Please increase the amount.`,
+              },
+            ])
+            setLoading(false)
+            return
+          }
+          
+          // Fetch Jupiter quote immediately
+          fetchSwapQuote(data.intent)
           setPendingSwap(data.intent)
         } else if (['limit', 'stop_loss', 'take_profit', 'dca'].includes(action)) {
           setPendingOrder(data.intent)
