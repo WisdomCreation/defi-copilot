@@ -10,7 +10,12 @@ interface Conversation {
   timestamp: Date
 }
 
-export function ChatHistory() {
+interface ChatHistoryProps {
+  onNavigate?: (section: string) => void
+  currentSection?: string
+}
+
+export function ChatHistory({ onNavigate, currentSection = 'chats' }: ChatHistoryProps) {
   const conversations: Conversation[] = []
 
   return (
@@ -41,19 +46,27 @@ export function ChatHistory() {
       {/* Navigation */}
       <div className="px-3 space-y-1 mb-4">
         <button 
+          onClick={() => onNavigate?.('search')}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
-          style={{ color: 'var(--foreground)' }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          style={{ 
+            color: 'var(--foreground)',
+            backgroundColor: currentSection === 'search' ? 'var(--hover)' : 'transparent'
+          }}
+          onMouseOver={(e) => currentSection !== 'search' && (e.currentTarget.style.backgroundColor = 'var(--hover)')}
+          onMouseOut={(e) => currentSection !== 'search' && (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <Search className="w-4 h-4" />
           Search
         </button>
         <button 
+          onClick={() => onNavigate?.('settings')}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
-          style={{ color: 'var(--foreground)' }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          style={{ 
+            color: 'var(--foreground)',
+            backgroundColor: currentSection === 'settings' ? 'var(--hover)' : 'transparent'
+          }}
+          onMouseOver={(e) => currentSection !== 'settings' && (e.currentTarget.style.backgroundColor = 'var(--hover)')}
+          onMouseOut={(e) => currentSection !== 'settings' && (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <Settings className="w-4 h-4" />
           Settings
@@ -68,28 +81,40 @@ export function ChatHistory() {
       {/* Main Navigation */}
       <div className="px-3 space-y-1">
         <button 
+          onClick={() => onNavigate?.('chats')}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
-          style={{ color: 'var(--foreground)' }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          style={{ 
+            color: 'var(--foreground)',
+            backgroundColor: currentSection === 'chats' ? 'var(--hover)' : 'transparent'
+          }}
+          onMouseOver={(e) => currentSection !== 'chats' && (e.currentTarget.style.backgroundColor = 'var(--hover)')}
+          onMouseOut={(e) => currentSection !== 'chats' && (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <MessageSquare className="w-4 h-4" />
           Chats
         </button>
         <button 
+          onClick={() => onNavigate?.('trades')}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
-          style={{ color: 'var(--foreground)' }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          style={{ 
+            color: 'var(--foreground)',
+            backgroundColor: currentSection === 'trades' ? 'var(--hover)' : 'transparent'
+          }}
+          onMouseOver={(e) => currentSection !== 'trades' && (e.currentTarget.style.backgroundColor = 'var(--hover)')}
+          onMouseOut={(e) => currentSection !== 'trades' && (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <FileText className="w-4 h-4" />
           Trades
         </button>
         <button 
+          onClick={() => onNavigate?.('portfolio')}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
-          style={{ color: 'var(--foreground)' }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--hover)'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          style={{ 
+            color: 'var(--foreground)',
+            backgroundColor: currentSection === 'portfolio' ? 'var(--hover)' : 'transparent'
+          }}
+          onMouseOver={(e) => currentSection !== 'portfolio' && (e.currentTarget.style.backgroundColor = 'var(--hover)')}
+          onMouseOut={(e) => currentSection !== 'portfolio' && (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <Code className="w-4 h-4" />
           Portfolio

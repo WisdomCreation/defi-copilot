@@ -22,9 +22,10 @@ interface Order {
 interface OrderDashboardProps {
   userWallet?: string
   onClose: () => void
+  embedded?: boolean
 }
 
-export function OrderDashboard({ userWallet, onClose }: OrderDashboardProps) {
+export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderDashboardProps) {
   const [orders, setOrders] = useState<Order[]>([])
   const [stats, setStats] = useState({ total: 0, watching: 0, filled: 0, cancelled: 0, failed: 0 })
   const [loading, setLoading] = useState(true)

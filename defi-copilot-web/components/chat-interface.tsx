@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, Loader2, List } from 'lucide-react'
+import { Send, Loader2 } from 'lucide-react'
 import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
-import { OrderDashboard } from './order-dashboard'
 import { CopilotLogo } from './logo'
 
 interface Message {
@@ -23,7 +22,6 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [jupiterQuote, setJupiterQuote] = useState<any>(null)
   const [conversationId, setConversationId] = useState<string | undefined>()
-  const [showOrderDashboard, setShowOrderDashboard] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | undefined>()
 
   const sendMessage = async () => {
@@ -454,21 +452,6 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         </div>
       )}
 
-      {/* My Orders Button - Fixed Position */}
-      {address && messages.length > 0 && (
-        <button
-          onClick={() => setShowOrderDashboard(true)}
-          className="fixed bottom-24 right-6 p-4 rounded-full shadow-lg transition-all hover:scale-105"
-          style={{
-            backgroundColor: '#7B70FF',
-            color: '#fff',
-            border: '2px solid rgba(255,255,255,0.2)',
-          }}
-        >
-          <List className="w-5 h-5" />
-        </button>
-      )}
-
       {/* Swap Confirmation Modal */}
       {pendingSwap && (
         <SwapConfirmation
@@ -495,13 +478,6 @@ export function ChatInterface({ address, chain }: { address?: string; chain?: st
         />
       )}
 
-      {/* Order Dashboard Modal */}
-      {showOrderDashboard && (
-        <OrderDashboard
-          userWallet={address}
-          onClose={() => setShowOrderDashboard(false)}
-        />
-      )}
     </div>
   )
 }
