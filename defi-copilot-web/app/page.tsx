@@ -54,7 +54,7 @@ export default function Home() {
           onNavigate={setCurrentSection}
           currentSection={currentSection}
           onNewChat={handleNewChat}
-          userAddress={address}
+          userAddress={solanaAddress || address}
         />
       </div>
 
@@ -67,7 +67,7 @@ export default function Home() {
 
         {/* Content based on selected section */}
         {currentSection === 'chats' && (
-          <ChatInterface key={chatKey} address={address} chain={chainName} />
+          <ChatInterface key={chatKey} address={solanaAddress || address} chain={chainName} />
         )}
         
         {currentSection === 'trades' && (
