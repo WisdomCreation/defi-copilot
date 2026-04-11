@@ -15,6 +15,7 @@ interface Order {
   createdAt: string
   filledAt?: string
   txHash?: string
+  jupiterOrderKey?: string
   dcaExecutions?: number
   dcaMaxExecutions?: number
 }
@@ -30,6 +31,7 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
   const [stats, setStats] = useState({ total: 0, watching: 0, filled: 0, cancelled: 0, failed: 0 })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (userWallet) {
@@ -73,22 +75,59 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
     }
   }
 
-  const cancelOrder = async (orderId: string) => {
-    if (!confirm('Cancel this order?')) return
-    
+  const cancelOrder = async (order: Order) => {
+    if (!confirm('Cancel this order? This will sign a transaction to retrieve your funds from Jupiter.')) return
+    if (!userWallet) return
+
+    setCancellingId(order.id)
     try {
-      const response = await fetch('/api/orders/cancel', {
+      // Step 1: Get unsigned cancel tx from our backend (which fetches it from Jupiter)
+      const txRes = await fetch(`/api/orders/${order.id}/cancel-tx?userWallet=${userWallet}`)
+      if (!txRes.ok) {
+        const err = await txRes.json()
+        // If no Jupiter key, just cancel in DB (order wasn't placed on-chain yet)
+        if (txRes.status === 400 && err.error?.includes('No Jupiter')) {
+          await fetch('/api/orders/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: order.id, userWallet }),
+          })
+          fetchOrders(); fetchStats()
+          return
+        }
+        throw new Error(err.error || 'Failed to get cancel transaction')
+      }
+      const { tx } = await txRes.json()
+
+      // Step 2: User signs with Phantom
+      const phantom = (window as any).phantom?.solana
+      if (!phantom) throw new Error('Phantom wallet not found')
+      if (!phantom.isConnected) await phantom.connect()
+
+      const { VersionedTransaction, Connection } = await import('@solana/web3.js')
+      const cancelTx = VersionedTransaction.deserialize(Buffer.from(tx, 'base64'))
+      const signedTx = await phantom.signTransaction(cancelTx)
+
+      // Step 3: Broadcast the cancel transaction
+      const connection = new Connection(
+        process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com'
+      )
+      await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false })
+
+      // Step 4: Update our DB
+      await fetch('/api/orders/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, userWallet }),
+        body: JSON.stringify({ orderId: order.id, userWallet }),
       })
-      
-      if (response.ok) {
-        fetchOrders()
-        fetchStats()
-      }
-    } catch (error) {
+
+      fetchOrders()
+      fetchStats()
+    } catch (error: any) {
       console.error('Error cancelling order:', error)
+      alert(`Cancel failed: ${error.message}`)
+    } finally {
+      setCancellingId(null)
     }
   }
 
@@ -281,15 +320,20 @@ export function OrderDashboard({ userWallet, onClose, embedded = false }: OrderD
 
                   {order.status === 'watching' && (
                     <button
-                      onClick={() => cancelOrder(order.id)}
-                      className="p-2 rounded-lg transition-colors"
+                      onClick={() => cancelOrder(order)}
+                      disabled={cancellingId === order.id}
+                      className="p-2 rounded-lg transition-colors disabled:opacity-40"
                       style={{ color: '#FF6B6B' }}
+                      title="Cancel order (signs cancel tx on Jupiter)"
                       onMouseOver={(e) =>
                         (e.currentTarget.style.backgroundColor = 'rgba(255,107,107,0.15)')
                       }
                       onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {cancellingId === order.id
+                        ? <span className="text-xs">...</span>
+                        : <Trash2 className="w-4 h-4" />
+                      }
                     </button>
                   )}
                 </div>

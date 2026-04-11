@@ -179,7 +179,42 @@ export async function ordersRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * Cancel an order
+   * Get unsigned Jupiter cancel transaction for an order.
+   * Frontend signs it with the user's wallet, then broadcasts it,
+   * then calls POST /api/orders/cancel to update our DB.
+   */
+  fastify.get('/api/orders/:orderId/cancel-tx', async (request, reply) => {
+    try {
+      const { orderId } = request.params as { orderId: string };
+      const { userWallet } = request.query as { userWallet: string };
+
+      if (!userWallet) {
+        return reply.code(400).send({ error: 'userWallet required' });
+      }
+
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { user: true },
+      });
+
+      if (!order) return reply.code(404).send({ error: 'Order not found' });
+      if (order.user.walletAddress !== userWallet)
+        return reply.code(403).send({ error: 'Unauthorized' });
+      if (!order.jupiterOrderKey)
+        return reply.code(400).send({ error: 'No Jupiter order key for this order' });
+
+      const executor = getOrderExecutor();
+      const tx = await executor.getCancelTransaction(order.jupiterOrderKey, userWallet);
+
+      return reply.send({ tx }); // base64 unsigned VersionedTransaction
+    } catch (error: any) {
+      console.error('Error getting cancel transaction:', error);
+      return reply.code(500).send({ error: error.message || 'Failed to get cancel transaction' });
+    }
+  });
+
+  /**
+   * Confirm cancellation after user has signed + broadcast the Jupiter cancel tx.
    */
   fastify.post('/api/orders/cancel', async (request, reply) => {
     try {
@@ -194,24 +229,17 @@ export async function ordersRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ error: 'Order not found' });
       }
 
-      // Verify ownership
       if (order.user.walletAddress !== data.userWallet) {
         return reply.code(403).send({ error: 'Unauthorized' });
       }
 
-      // Cancel the order
       const executor = getOrderExecutor();
       await executor.cancelOrder(data.orderId);
 
-      return reply.send({
-        success: true,
-        message: 'Order cancelled successfully',
-      });
+      return reply.send({ success: true, message: 'Order cancelled' });
     } catch (error: any) {
       console.error('Error cancelling order:', error);
-      return reply.code(400).send({
-        error: error.message || 'Failed to cancel order',
-      });
+      return reply.code(400).send({ error: error.message || 'Failed to cancel order' });
     }
   });
 

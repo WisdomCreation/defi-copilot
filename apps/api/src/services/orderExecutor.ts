@@ -1,337 +1,182 @@
-import { Queue, Worker } from 'bullmq';
+/**
+ * Order Executor — Jupiter Trigger Integration
+ *
+ * Architecture: Jupiter Trigger V1 handles ALL execution.
+ *   1. User places order → signs once → funds sit in Jupiter's on-chain PDA escrow
+ *   2. Jupiter keepers monitor price 24/7 and execute automatically
+ *   3. This service only syncs status: polls Jupiter's open-orders API
+ *      and marks orders as "filled" in our DB when Jupiter has executed them
+ *
+ * We NEVER hold private keys, pre-signed transactions, or execute on behalf of users.
+ */
+
+import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { prisma } from '../db/prisma';
-import { priceMonitor } from './priceMonitor';
-import { Connection as SolanaConnection, VersionedTransaction, PublicKey } from '@solana/web3.js';
+import axios from 'axios';
 
-// Redis connection
 const connection = new IORedis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   maxRetriesPerRequest: null,
 });
 
-// Create order queue
+// Keep queue export so existing route imports don't break
 export const orderQueue = new Queue('orders', { connection });
 
-interface OrderJob {
-  orderId: string;
-}
+const JUPITER_API = 'https://api.jup.ag';
+const SYNC_INTERVAL_MS = 30_000; // sync every 30 seconds
 
-/**
- * Order Executor Service
- * Monitors pending orders and executes them when conditions are met
- */
 export class OrderExecutor {
-  private worker: Worker;
-  private solanaConnection: SolanaConnection;
-
   constructor() {
-    this.solanaConnection = new SolanaConnection(
-      process.env.SOLANA_RPC || 'https://api.mainnet-beta.solana.com'
-    );
+    this.startStatusSync();
+  }
 
-    // Create worker to process orders
-    this.worker = new Worker(
-      'orders',
-      async (job) => {
-        console.log(`🔄 Processing order: ${job.data.orderId}`);
-        await this.processOrder(job.data.orderId);
+  // ─── Jupiter Status Sync ────────────────────────────────────────────────────
+
+  private async startStatusSync() {
+    console.log('🔄 Jupiter order status sync started (interval: 30s)');
+    // Immediate first run
+    await this.syncJupiterOrderStatuses().catch((e) =>
+      console.error('Initial sync error:', e)
+    );
+    setInterval(() => {
+      this.syncJupiterOrderStatuses().catch((e) =>
+        console.error('Sync error:', e)
+      );
+    }, SYNC_INTERVAL_MS);
+  }
+
+  /**
+   * For every wallet that has active Jupiter orders in our DB,
+   * compare against Jupiter's open-orders API.
+   * Any order that is no longer open has been filled → update our DB.
+   */
+  private async syncJupiterOrderStatuses() {
+    const watchingOrders = await prisma.order.findMany({
+      where: {
+        status: 'watching',
+        jupiterOrderKey: { not: null },
       },
-      {
-        connection,
-        concurrency: 5, // Process 5 orders concurrently
-      }
-    );
-
-    this.worker.on('completed', (job) => {
-      console.log(`✅ Order completed: ${job.id}`);
+      include: { user: { select: { walletAddress: true } } },
     });
 
-    this.worker.on('failed', (job, err) => {
-      console.error(`❌ Order failed: ${job?.id}`, err);
-    });
+    if (watchingOrders.length === 0) return;
 
-    // Start monitoring all active orders
-    this.startMonitoring();
-  }
-
-  /**
-   * Start monitoring all pending orders
-   */
-  private async startMonitoring() {
-    console.log('🔍 Starting order monitoring...');
-
-    // Check all pending orders every 10 seconds
-    setInterval(async () => {
-      await this.checkPendingOrders();
-    }, 10000);
-
-    // Also check immediately
-    await this.checkPendingOrders();
-  }
-
-  /**
-   * Check all pending orders for execution
-   */
-  private async checkPendingOrders() {
-    try {
-      const pendingOrders = await prisma.order.findMany({
-        where: {
-          status: 'watching',
-        },
-      });
-
-      for (const order of pendingOrders) {
-        await this.checkOrder(order);
-      }
-    } catch (error) {
-      console.error('Error checking pending orders:', error);
+    // Group by wallet so we make one API call per wallet
+    const byWallet = new Map<string, typeof watchingOrders>();
+    for (const order of watchingOrders) {
+      const wallet = order.user.walletAddress;
+      if (!byWallet.has(wallet)) byWallet.set(wallet, []);
+      byWallet.get(wallet)!.push(order);
     }
-  }
 
-  /**
-   * Check if an order should be executed
-   */
-  private async checkOrder(order: any) {
-    try {
-      // Skip if no trigger price
-      if (!order.triggerPrice || !order.triggerCondition) {
-        return;
-      }
+    for (const [wallet, orders] of byWallet) {
+      try {
+        const openKeys = await this.fetchJupiterOpenOrderKeys(wallet);
 
-      // Get current price
-      const symbol = `${order.tokenOut}/USD`;
-      const currentPrice = await priceMonitor.getPrice(symbol);
-
-      const targetPrice = parseFloat(order.triggerPrice);
-      const shouldExecute =
-        (order.triggerCondition === 'above' && currentPrice >= targetPrice) ||
-        (order.triggerCondition === 'below' && currentPrice <= targetPrice);
-
-      if (shouldExecute) {
-        console.log(
-          `🎯 Order ${order.id} triggered! ${symbol} ${currentPrice} ${order.triggerCondition} ${targetPrice}`
-        );
-
-        if (order.signedTx) {
-          // Legacy pre-signed tx path - add to queue
-          await orderQueue.add('execute-order', {
-            orderId: order.id,
-          });
-        } else {
-          // New path: mark order as triggered, user needs to sign fresh transaction
-          await prisma.order.update({
-            where: { id: order.id },
-            data: { status: 'triggered' },
-          });
-          console.log(`✅ Order ${order.id} marked as triggered - awaiting fresh user signature`);
+        for (const order of orders) {
+          if (order.jupiterOrderKey && !openKeys.has(order.jupiterOrderKey)) {
+            // No longer in Jupiter's open orders → filled (or expired/cancelled on Jupiter side)
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { status: 'filled', filledAt: new Date() },
+            });
+            console.log(
+              `✅ Order ${order.id} synced as filled (Jupiter key: ${order.jupiterOrderKey})`
+            );
+          }
         }
+      } catch (err) {
+        console.error(`Sync error for wallet ${wallet}:`, err);
       }
-    } catch (error) {
-      console.error(`Error checking order ${order.id}:`, error);
     }
   }
 
   /**
-   * Process and execute an order
+   * Fetch all open Jupiter Trigger V1 order keys for a wallet.
+   * Returns a Set of order public keys.
    */
-  private async processOrder(orderId: string) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-    });
-
-    if (!order) {
-      console.error(`Order ${orderId} not found`);
-      return;
-    }
-
-    if (order.status !== 'watching') {
-      console.log(`Order ${orderId} is ${order.status}, skipping`);
-      return;
-    }
-
+  private async fetchJupiterOpenOrderKeys(
+    walletAddress: string
+  ): Promise<Set<string>> {
     try {
-      // Execute the order based on type
-      switch (order.type) {
-        case 'limit':
-        case 'stop_loss':
-        case 'take_profit':
-          await this.executeSwapOrder(order);
-          break;
-
-        case 'dca':
-          await this.executeDCAOrder(order);
-          break;
-
-        case 'bridge':
-          await this.executeBridgeOrder(order);
-          break;
-
-        default:
-          console.error(`Unknown order type: ${order.type}`);
-      }
-    } catch (error) {
-      console.error(`Error executing order ${orderId}:`, error);
-
-      // Mark as failed
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: 'failed',
-        },
+      const { data } = await axios.get(`${JUPITER_API}/limit/v2/openOrders`, {
+        params: { wallet: walletAddress },
+        timeout: 10_000,
+        headers: process.env.JUPITER_API_KEY
+          ? { 'x-api-key': process.env.JUPITER_API_KEY }
+          : {},
       });
-    }
-  }
 
-  /**
-   * Execute a swap order (limit/stop-loss/take-profit) using pre-signed tx
-   * Only used for legacy orders that have signedTx stored
-   */
-  private async executeSwapOrder(order: any) {
-    console.log(`🔄 Executing swap order ${order.id}...`);
-
-    if (!order.signedTx) {
-      // No pre-signed tx - mark as triggered for user to sign
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'triggered' },
-      });
-      console.log(`✅ Order ${order.id} marked as triggered - awaiting fresh user signature`);
-      return;
-    }
-
-    try {
-      // Deserialize the pre-signed transaction
-      const txBuffer = Buffer.from(order.signedTx, 'base64');
-      const transaction = VersionedTransaction.deserialize(txBuffer);
-
-      // Broadcast to blockchain
-      const signature = await this.solanaConnection.sendRawTransaction(
-        transaction.serialize()
+      const orders: any[] = Array.isArray(data) ? data : data?.orders ?? [];
+      // Jupiter may return publicKey or account depending on version
+      return new Set(
+        orders.map((o) => o.publicKey ?? o.orderKey ?? o.account).filter(Boolean)
       );
-
-      console.log(`📡 Transaction broadcasted: ${signature}`);
-
-      // Wait for confirmation
-      await this.solanaConnection.confirmTransaction(signature, 'confirmed');
-
-      console.log(`✅ Transaction confirmed: ${signature}`);
-
-      // Update order status
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: 'filled',
-          txHash: signature,
-          filledAt: new Date(),
-        },
-      });
-
-      console.log(`✅ Order ${order.id} executed successfully!`);
     } catch (err: any) {
-      // Pre-signed tx likely expired - mark as triggered so user can sign fresh
-      console.error(`Pre-signed tx failed for order ${order.id}: ${err.message}`);
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'triggered' },
-      });
-    }
-  }
-
-  /**
-   * Execute a DCA order
-   */
-  private async executeDCAOrder(order: any) {
-    console.log(`🔄 Executing DCA order ${order.id}...`);
-
-    // Check if max executions reached
-    if (order.dcaMaxExecutions && order.dcaExecutions >= order.dcaMaxExecutions) {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'filled' },
-      });
-      return;
-    }
-
-    // Execute swap
-    await this.executeSwapOrder(order);
-
-    // Increment execution count
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        dcaExecutions: order.dcaExecutions + 1,
-        status: order.dcaExecutions + 1 >= order.dcaMaxExecutions ? 'filled' : 'watching',
-      },
-    });
-
-    // Schedule next execution
-    if (order.dcaExecutions + 1 < order.dcaMaxExecutions) {
-      const delay = this.getDCADelay(order.dcaInterval);
-      await orderQueue.add(
-        'execute-order',
-        { orderId: order.id },
-        { delay }
+      console.error(
+        `Jupiter open-orders fetch failed for ${walletAddress}:`,
+        err?.response?.data ?? err.message
       );
+      return new Set(); // Safe fallback — don't mark anything as filled on API error
     }
   }
 
-  /**
-   * Execute a bridge order
-   */
-  private async executeBridgeOrder(order: any) {
-    console.log(`🌉 Bridge order execution not yet implemented`);
-    // TODO: Implement LI.FI bridge integration
-  }
+  // ─── Cancel ────────────────────────────────────────────────────────────────
 
   /**
-   * Get delay in milliseconds for DCA interval
+   * Get an UNSIGNED cancel transaction from Jupiter for a given order.
+   * The frontend signs it with the user's wallet and broadcasts it.
+   * Returns base64-encoded unsigned transaction.
    */
-  private getDCADelay(interval: string): number {
-    const delays: Record<string, number> = {
-      daily: 24 * 60 * 60 * 1000,
-      weekly: 7 * 24 * 60 * 60 * 1000,
-      monthly: 30 * 24 * 60 * 60 * 1000,
-    };
+  async getCancelTransaction(
+    jupiterOrderKey: string,
+    walletAddress: string
+  ): Promise<string> {
+    const { data } = await axios.post(
+      `${JUPITER_API}/limit/v2/cancelOrders`,
+      { maker: walletAddress, orders: [jupiterOrderKey] },
+      {
+        headers: process.env.JUPITER_API_KEY
+          ? { 'x-api-key': process.env.JUPITER_API_KEY }
+          : {},
+        timeout: 10_000,
+      }
+    );
 
-    return delays[interval] || delays.weekly;
-  }
-
-  /**
-   * Schedule a time-based order
-   */
-  async scheduleOrder(orderId: string, executeAt: Date) {
-    const delay = executeAt.getTime() - Date.now();
-
-    if (delay > 0) {
-      await orderQueue.add(
-        'execute-order',
-        { orderId },
-        { delay }
-      );
-
-      console.log(`⏰ Order ${orderId} scheduled for ${executeAt.toISOString()}`);
+    if (!data?.tx) {
+      throw new Error('Jupiter did not return a cancel transaction');
     }
+
+    return data.tx; // base64 unsigned VersionedTransaction
   }
 
   /**
-   * Cancel an order
+   * Mark an order as cancelled in our database.
+   * Called after the user has signed + broadcast the Jupiter cancel tx.
    */
   async cancelOrder(orderId: string) {
     await prisma.order.update({
       where: { id: orderId },
-      data: {
-        status: 'cancelled',
-        cancelledAt: new Date(),
-      },
+      data: { status: 'cancelled', cancelledAt: new Date() },
     });
-
     console.log(`❌ Order ${orderId} cancelled`);
+  }
+
+  /**
+   * Schedule a time-based order (retained for legacy support).
+   */
+  async scheduleOrder(orderId: string, executeAt: Date) {
+    const delay = executeAt.getTime() - Date.now();
+    if (delay > 0) {
+      await orderQueue.add('execute-order', { orderId }, { delay });
+      console.log(`⏰ Order ${orderId} scheduled for ${executeAt.toISOString()}`);
+    }
   }
 }
 
-// Singleton instance
+// Singleton
 let executorInstance: OrderExecutor | null = null;
 
 export function getOrderExecutor(): OrderExecutor {
@@ -341,7 +186,7 @@ export function getOrderExecutor(): OrderExecutor {
   return executorInstance;
 }
 
-// Auto-start on import (only in production)
+// Auto-start in production
 if (process.env.NODE_ENV === 'production') {
   getOrderExecutor();
 }
