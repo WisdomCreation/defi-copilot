@@ -171,10 +171,20 @@ function QueryResultCard({ intent }: { intent: any }) {
         <div className="px-3 py-2" style={{ backgroundColor: 'var(--background)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Capital Gains Estimate</span>
         </div>
-        <div className="px-3 py-2 grid grid-cols-2 gap-3 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="px-3 py-2 grid grid-cols-3 gap-3 text-xs" style={{ borderTop: '1px solid var(--border)' }}>
           <div><div className="font-bold text-sm" style={{ color: parseFloat(qr.realizedGains) >= 0 ? '#00C9A7' : '#FF6B6B' }}>${qr.realizedGains}</div><div style={{ color: '#999' }}>Realized Gains</div></div>
           <div><div className="font-bold text-sm" style={{ color: '#FFB347' }}>${qr.estimatedTax}</div><div style={{ color: '#999' }}>Est. Tax (~20%)</div></div>
+          <div><div className="font-bold text-sm" style={{ color: 'var(--foreground)' }}>{qr.disposals || 0}</div><div style={{ color: '#999' }}>Disposals</div></div>
         </div>
+        {qr.disposalDetails?.length > 0 && qr.disposalDetails.map((d: any, i: number) => (
+          <div key={i} className="px-3 py-2 text-xs flex justify-between" style={{ borderTop: '1px solid var(--border)' }}>
+            <div style={{ color: 'var(--foreground)' }}>Sold {d.amount?.toFixed ? d.amount.toFixed(4) : d.amount} {d.token} <span style={{ color: '#999' }}>on {d.date}</span></div>
+            <div style={{ color: parseFloat(d.gain) >= 0 ? '#00C9A7' : '#FF6B6B' }}>{parseFloat(d.gain) >= 0 ? '+' : ''}${d.gain}</div>
+          </div>
+        ))}
+        {qr.realizedGains === '0.00' && qr.totalSwaps === 0 && (
+          <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>No swap transactions found in your history.</div>
+        )}
         <div className="px-3 py-2 text-xs" style={{ color: '#999', borderTop: '1px solid var(--border)' }}>{qr.note}</div>
       </div>
     )

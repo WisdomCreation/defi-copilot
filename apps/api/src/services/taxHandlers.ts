@@ -22,26 +22,72 @@ async function fetchAllTransactions(walletAddress: string, limit = 100): Promise
   return Array.isArray(data) ? data : [];
 }
 
-// ─── Parse swap events from Helius enriched transactions ───────────────────
+// Known mint → symbol
+const MINT_SYMBOL: Record<string, string> = {
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
+  'So11111111111111111111111111111111111111112': 'SOL',
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': 'mSOL',
+  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': 'JUP',
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'BONK',
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': 'ETH',
+};
+
+// ─── Parse ALL transactions using tokenTransfers + nativeBalanceChange ──────
 function parseSwaps(txs: any[], walletAddress: string) {
-  const swaps: any[] = [];
+  const events: any[] = [];
+
   for (const tx of txs) {
-    if (!tx.events?.swap) continue;
-    const swap = tx.events.swap;
     const date = new Date((tx.timestamp || 0) * 1000);
     const year = date.getFullYear();
+    const feeSol = (tx.fee || 0) / 1e9;
 
-    const tokenIn = swap.tokenInputs?.[0];
-    const tokenOut = swap.tokenOutputs?.[0];
-    const nativeIn = swap.nativeInput;
-    const nativeOut = swap.nativeOutput;
+    // Get this wallet's net SOL change (excluding fee)
+    const walletAccData = (tx.accountData || []).find((a: any) => a.account === walletAddress);
+    const netSolChange = walletAccData ? (walletAccData.nativeBalanceChange + (tx.feePayer === walletAddress ? tx.fee : 0)) / 1e9 : 0;
 
-    const inSymbol = tokenIn?.tokenStandard === 'Fungible' ? (tokenIn.symbol || 'TOKEN') : (nativeIn ? 'SOL' : '?');
-    const outSymbol = tokenOut?.tokenStandard === 'Fungible' ? (tokenOut.symbol || 'TOKEN') : (nativeOut ? 'SOL' : '?');
-    const inAmount = tokenIn ? (tokenIn.rawTokenAmount?.tokenAmount || 0) / Math.pow(10, tokenIn.rawTokenAmount?.decimals || 6) : (nativeIn?.amount || 0) / 1e9;
-    const outAmount = tokenOut ? (tokenOut.rawTokenAmount?.tokenAmount || 0) / Math.pow(10, tokenOut.rawTokenAmount?.decimals || 6) : (nativeOut?.amount || 0) / 1e9;
+    // Get token transfers where wallet is sender or receiver
+    const tokenIn: any[] = [];   // tokens wallet RECEIVED
+    const tokenOut: any[] = [];  // tokens wallet SENT
 
-    swaps.push({
+    for (const t of tx.tokenTransfers || []) {
+      const decimals = 6; // default; overridden below
+      const amount = t.tokenAmount;
+      const symbol = MINT_SYMBOL[t.mint] || t.mint?.slice(0, 6) + '...';
+      if (t.toUserAccount === walletAddress && amount > 0) {
+        tokenIn.push({ symbol, amount, mint: t.mint });
+      }
+      if (t.fromUserAccount === walletAddress && amount > 0) {
+        tokenOut.push({ symbol, amount, mint: t.mint });
+      }
+    }
+
+    // Determine swap direction
+    let inSymbol = '?', outSymbol = '?', amountIn = 0, amountOut = 0;
+
+    if (tokenOut.length > 0 && tokenIn.length > 0) {
+      // Token → Token swap
+      inSymbol = tokenOut[0].symbol;
+      outSymbol = tokenIn[0].symbol;
+      amountIn = tokenOut[0].amount;
+      amountOut = tokenIn[0].amount;
+    } else if (tokenOut.length > 0 && netSolChange > 0.001) {
+      // Token → SOL
+      inSymbol = tokenOut[0].symbol;
+      outSymbol = 'SOL';
+      amountIn = tokenOut[0].amount;
+      amountOut = netSolChange;
+    } else if (tokenIn.length > 0 && netSolChange < -0.001) {
+      // SOL → Token
+      inSymbol = 'SOL';
+      outSymbol = tokenIn[0].symbol;
+      amountIn = Math.abs(netSolChange);
+      amountOut = tokenIn[0].amount;
+    } else {
+      continue; // not a recognisable swap
+    }
+
+    events.push({
       signature: tx.signature,
       date: date.toISOString().split('T')[0],
       timestamp: tx.timestamp,
@@ -49,13 +95,14 @@ function parseSwaps(txs: any[], walletAddress: string) {
       type: 'SWAP',
       tokenIn: inSymbol,
       tokenOut: outSymbol,
-      amountIn: inAmount,
-      amountOut: outAmount,
-      fee: (tx.fee || 0) / 1e9,
-      description: tx.description || `Swap ${inSymbol} → ${outSymbol}`,
+      amountIn,
+      amountOut,
+      fee: feeSol,
+      description: tx.description || `${inSymbol} → ${outSymbol}`,
     });
   }
-  return swaps;
+
+  return events;
 }
 
 // ─── Get current price for a symbol ────────────────────────────────────────
@@ -106,42 +153,46 @@ export async function handleCapitalGains(walletAddress: string) {
     const txs = await fetchAllTransactions(walletAddress, 100);
     const swaps = parseSwaps(txs, walletAddress);
 
-    // Track cost basis (FIFO simplified)
+    const stables = new Set(['USDC', 'USDT', 'DAI', 'BUSD']);
     const costBasis: Record<string, { totalCost: number; totalAmount: number }> = {};
     let realizedGains = 0;
+    const disposalDetails: any[] = [];
 
     for (const s of swaps) {
-      const stables = new Set(['USDC', 'USDT', 'DAI']);
+      const buyingToken = stables.has(s.tokenIn) ? s.tokenOut : null;   // e.g. USDC→SOL → buying SOL
+      const sellingToken = stables.has(s.tokenOut) ? s.tokenIn : null;  // e.g. SOL→USDC → selling SOL
 
-      // Buy: paying stable for token → record cost
-      if (stables.has(s.tokenIn) && !stables.has(s.tokenOut)) {
-        if (!costBasis[s.tokenOut]) costBasis[s.tokenOut] = { totalCost: 0, totalAmount: 0 };
-        costBasis[s.tokenOut].totalCost += s.amountIn;
-        costBasis[s.tokenOut].totalAmount += s.amountOut;
+      // Also handle SOL→Token (SOL as cost basis)
+      const buyingWithSol = s.tokenIn === 'SOL' && !stables.has(s.tokenOut) ? s.tokenOut : null;
+      const sellingForSol = s.tokenOut === 'SOL' && !stables.has(s.tokenIn) ? s.tokenIn : null;
+
+      if (buyingToken) {
+        if (!costBasis[buyingToken]) costBasis[buyingToken] = { totalCost: 0, totalAmount: 0 };
+        // amountIn = USDC paid, amountOut = tokens received
+        costBasis[buyingToken].totalCost += s.amountIn;
+        costBasis[buyingToken].totalAmount += s.amountOut;
       }
 
-      // Sell: token → stable → calculate gain
-      if (!stables.has(s.tokenIn) && stables.has(s.tokenOut)) {
-        const cb = costBasis[s.tokenIn];
+      if (sellingToken) {
+        const cb = costBasis[sellingToken];
         if (cb && cb.totalAmount > 0) {
-          const avgCost = cb.totalCost / cb.totalAmount;
-          const proceeds = s.amountOut;
-          const costOfSale = avgCost * s.amountIn;
-          realizedGains += proceeds - costOfSale;
+          const avgCostPerToken = cb.totalCost / cb.totalAmount;
+          const proceeds = s.amountOut; // USDC received
+          const costOfSale = avgCostPerToken * s.amountIn;
+          const gain = proceeds - costOfSale;
+          realizedGains += gain;
+          disposalDetails.push({ token: sellingToken, amount: s.amountIn, proceeds: proceeds.toFixed(2), cost: costOfSale.toFixed(2), gain: gain.toFixed(2), date: s.date });
         }
       }
     }
 
-    // Get current prices for unrealized gain estimation
-    const solPrice = await getPrice('SOL');
-    const solBalance = txs.length > 0 ? 0 : 0; // Would need balance call
-
     return {
       type: 'capital_gains',
       realizedGains: realizedGains.toFixed(2),
-      estimatedTax: (Math.max(0, realizedGains) * 0.20).toFixed(2), // ~20% long-term rate estimate
+      estimatedTax: (Math.max(0, realizedGains) * 0.20).toFixed(2),
       totalSwaps: swaps.length,
-      taxableSwaps: swaps.filter(s => !['USDC','USDT','DAI'].includes(s.tokenIn)).length,
+      disposals: disposalDetails.length,
+      disposalDetails: disposalDetails.slice(0, 5),
       costBasisTokens: Object.keys(costBasis),
       note: 'Estimate based on on-chain swap history. Consult a tax professional for filing.',
     };
