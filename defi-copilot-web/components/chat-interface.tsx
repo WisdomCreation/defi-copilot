@@ -1219,7 +1219,7 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
         inputMint,
         outputMint,
         amount,
-        slippageBps: 50,
+        slippageBps: 100,
       })
       
       if (quote) {
@@ -1459,13 +1459,10 @@ export function ChatInterface({ address, chain, initialSessionKey }: { address?:
       
       console.log('Getting Jupiter quote:', { inputMint, outputMint, amount })
       
-      // Get best swap route from Jupiter
-      const quote = await jupiterApi.quoteGet({
-        inputMint,
-        outputMint,
-        amount,
-        slippageBps: 50, // 0.5% slippage
-      })
+      // Reuse the pre-fetched quote if available and same pair, otherwise re-fetch
+      let quote = (jupiterQuote && jupiterQuote.inputMint === inputMint && jupiterQuote.outputMint === outputMint)
+        ? jupiterQuote
+        : await jupiterApi.quoteGet({ inputMint, outputMint, amount, slippageBps: 100 })
       
       if (!quote) {
         throw new Error('No route found for this swap')

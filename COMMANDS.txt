@@ -91,3 +91,39 @@ cancel order <id>
 
 Note: Replace <address> with a real Solana wallet address or a saved contact name.
       GhostPay and Houdini require a minimum of $50 USD equivalent per private send.
+
+
+══════════════════════════════════════════════════════════════════════
+MULTILINGUAL EXAMPLES — Commands work in any language
+══════════════════════════════════════════════════════════════════════
+
+── FRENCH (Français) ──────────────────────────────────────────────────
+échange 0.5 SOL en USDC
+montre mon portefeuille
+quel est le prix de SOL
+envoie 0.1 SOL à hassan
+montre mon rapport fiscal
+envoie 0.5 SOL à hassan de façon privée
+quel est le meilleur rendement pour USDC
+annule mon ordre
+
+── ARABIC (العربية) ───────────────────────────────────────────────────
+حوّل 0.5 SOL إلى USDC
+أرني محفظتي
+ما هو سعر SOL
+أرسل 0.1 SOL إلى hassan
+أرني تقرير الضرائب
+أرسل 0.5 SOL إلى hassan بشكل خاص
+ما أفضل عائد لـ USDC
+ألغ طلبي
+
+── CHINESE (中文) ──────────────────────────────────────────────────────
+将 0.5 SOL 兑换为 USDC
+显示我的投资组合
+SOL 的价格是多少
+向 hassan 发送 0.1 SOL
+显示我的税务报告
+私密地向 hassan 发送 0.5 SOL
+USDC 的最佳收益在哪里
+取消我的订单
+

@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   description: "Your intelligent companion for DeFi trading and portfolio management",
   icons: {
     icon: [
+      { url: '/icon.png', sizes: '64x64', type: 'image/png' },
       { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
       { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
