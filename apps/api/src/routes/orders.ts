@@ -60,6 +60,7 @@ export async function ordersRoutes(fastify: FastifyInstance) {
           triggerCondition: data.triggerCondition,
           chain: data.chain,
           signedTx: data.signedTx,
+          jupiterOrderKey: data.jupiterOrderKey,
           txHash: data.txHash,
           dcaInterval: data.dcaInterval,
           dcaMaxExecutions: data.dcaMaxExecutions,

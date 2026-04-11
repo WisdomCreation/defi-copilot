@@ -17,7 +17,23 @@
       "Read(//Users/hassanbashir/.config/vercel/**)",
       "Read(//Users/hassanbashir/.vercel/**)",
       "Read(//Users/hassanbashir/.config/**)",
-      "Read(//Users/hassanbashir/**)"
+      "Read(//Users/hassanbashir/**)",
+      "WebFetch(domain:station.jup.ag)",
+      "WebSearch",
+      "WebFetch(domain:developers.jup.ag)",
+      "WebFetch(domain:solana.com)",
+      "WebFetch(domain:dev.jup.ag)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.drift.trade)",
+      "WebFetch(domain:hub.jup.ag)",
+      "WebFetch(domain:support.jup.ag)",
+      "WebFetch(domain:www.quicknode.com)",
+      "WebFetch(domain:blog.fordefi.com)",
+      "WebFetch(domain:www.coindesk.com)",
+      "WebFetch(domain:www.helius.dev)",
+      "WebFetch(domain:blocksec.com)",
+      "Bash(ssh -i ~/.ssh/clawdbot_key root@107.189.19.244 \"cd /root/defi-copilot && git pull origin main && pm2 restart defi-api && echo 'Server updated'\")",
+      "Bash(ssh -i ~/.ssh/clawdbot_key root@107.189.19.244 \"pm2 logs defi-api --lines 10 --nostream 2>&1 | tail -15\")"
     ]
   }
 }
