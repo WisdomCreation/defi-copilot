@@ -6,6 +6,7 @@ import { SwapConfirmation } from './swap-confirmation'
 import { OrderPlacement } from './order-placement'
 import { CopilotLogo } from './logo'
 import { getContacts, saveContact, deleteContact, resolveContact, resolveContacts, type Contact } from '../hooks/useContacts'
+import { saveScheduledPayment, getScheduledPayments, cancelScheduledPayment, updateScheduledPayment, parseScheduleDate, type ScheduledPayment } from '../hooks/useScheduledPayments'
 
 function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: string }) {
   const qr = intent?.queryResult
@@ -257,6 +258,18 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
 
   // ── Payment cards ────────────────────────────────────────────────────────
 
+  // Scheduled payment
+  if (qr.type === 'scheduled_payment_preview') {
+    const resolvedQr = { ...qr }
+    if (userAddress && intent?.recipient) {
+      const resolved = resolveContact(userAddress, intent.recipient)
+      resolvedQr.toAddress = resolved
+      const isName = !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(intent.recipient) && !intent.recipient.endsWith('.sol')
+      resolvedQr.toDisplay = isName ? `${intent.recipient} (${resolved.slice(0, 8)}...)` : resolved
+    }
+    return <ScheduledPaymentCard qr={resolvedQr} userAddress={userAddress} />
+  }
+
   // Direct payment preview — confirm + sign
   if (qr.type === 'payment_preview') {
     // Patch toAddress from resolved intent.recipient (contact name resolution happens client-side)
@@ -382,6 +395,125 @@ function QueryResultCard({ intent, userAddress }: { intent: any; userAddress?: s
   }
 
   return null
+}
+
+function ScheduledPaymentCard({ qr, userAddress }: { qr: any; userAddress?: string }) {
+  const [entry, setEntry] = useState<ScheduledPayment | null>(null)
+  const [timeLeft, setTimeLeft] = useState('')
+  const [fired, setFired] = useState(false)
+  const [cancelled, setCancelled] = useState(false)
+
+  // Save on mount
+  useEffect(() => {
+    if (!userAddress || !qr.toAddress || !qr.amount) return
+    const parsed = parseScheduleDate(qr.scheduleDate || '')
+    if (!parsed) return
+    const saved = saveScheduledPayment(userAddress, {
+      fromWallet: userAddress,
+      toAddress: qr.toAddress,
+      toDisplay: qr.toDisplay || qr.toAddress,
+      token: qr.token,
+      amount: qr.amount,
+      mint: qr.mint,
+      decimals: qr.decimals,
+      scheduledAt: parsed.ts,
+      label: parsed.label,
+      status: 'pending',
+    })
+    setEntry(saved)
+  }, [])
+
+  // Countdown + auto-fire
+  useEffect(() => {
+    if (!entry || cancelled) return
+    const interval = setInterval(async () => {
+      const now = Date.now()
+      const diff = entry.scheduledAt - now
+      if (diff <= 0) {
+        clearInterval(interval)
+        if (fired) return
+        setFired(true)
+        // Auto-send
+        try {
+          const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
+          const phantom = (window as any).phantom?.solana
+          if (!phantom?.isConnected) { phantom?.connect(); return }
+          const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com')
+          const from = new PublicKey(userAddress!)
+          const to = new PublicKey(entry.toAddress)
+          const { blockhash } = await connection.getLatestBlockhash()
+          const tx = new Transaction({ recentBlockhash: blockhash, feePayer: from })
+          tx.add(SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: Math.round(entry.amount * LAMPORTS_PER_SOL) }))
+          const signed = await phantom.signTransaction(tx)
+          const sig = await connection.sendRawTransaction(signed.serialize())
+          updateScheduledPayment(userAddress!, entry.id, { status: 'sent', txSignature: sig })
+          setEntry(prev => prev ? { ...prev, status: 'sent', txSignature: sig } : prev)
+        } catch (e: any) {
+          updateScheduledPayment(userAddress!, entry.id, { status: 'failed' })
+          setEntry(prev => prev ? { ...prev, status: 'failed' } : prev)
+        }
+        return
+      }
+      const days = Math.floor(diff / 86400000)
+      const hours = Math.floor((diff % 86400000) / 3600000)
+      const mins = Math.floor((diff % 3600000) / 60000)
+      setTimeLeft(days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`)
+    }, 10000)
+    // Set initial immediately
+    const diff = entry.scheduledAt - Date.now()
+    const days = Math.floor(diff / 86400000)
+    const hours = Math.floor((diff % 86400000) / 3600000)
+    const mins = Math.floor((diff % 3600000) / 60000)
+    setTimeLeft(days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`)
+    return () => clearInterval(interval)
+  }, [entry, cancelled, fired])
+
+  if (!entry) {
+    const parsed = parseScheduleDate(qr.scheduleDate || '')
+    if (!parsed) return (
+      <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#FF6B6B' }}>
+        Could not parse date &quot;{qr.scheduleDate}&quot;. Try &quot;april 15&quot;, &quot;tomorrow&quot;, or &quot;in 3 days&quot;.
+      </div>
+    )
+    return null
+  }
+
+  if (entry.status === 'sent') return (
+    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(0,201,167,0.08)', border: '1px solid rgba(0,201,167,0.3)' }}>
+      <div className="font-semibold mb-1" style={{ color: '#00C9A7' }}>✓ Scheduled payment sent!</div>
+      {entry.txSignature && <a href={`https://solscan.io/tx/${entry.txSignature}`} target="_blank" rel="noreferrer" style={{ color: '#7B70FF' }}>View on Solscan →</a>}
+    </div>
+  )
+
+  if (cancelled || entry.status === 'cancelled') return (
+    <div className="mt-3 p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: '#999' }}>
+      Scheduled payment cancelled.
+    </div>
+  )
+
+  return (
+    <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(123,112,255,0.3)' }}>
+      <div className="px-3 py-2 flex justify-between items-center" style={{ backgroundColor: 'rgba(123,112,255,0.08)' }}>
+        <span className="text-xs font-semibold" style={{ color: '#7B70FF' }}>⏰ Scheduled Payment</span>
+        <span className="text-xs font-bold" style={{ color: '#7B70FF' }}>{timeLeft ? `in ${timeLeft}` : entry.label}</span>
+      </div>
+      <div className="px-3 py-2 text-xs space-y-1" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>To</span><span style={{ color: 'var(--foreground)' }}>{entry.toDisplay}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Amount</span><span style={{ color: 'var(--foreground)' }}>{entry.amount} {entry.token}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Send date</span><span style={{ color: '#7B70FF' }}>{entry.label}</span></div>
+        <div className="flex justify-between"><span style={{ color: '#999' }}>Status</span><span style={{ color: '#00C9A7' }}>Pending — will auto-send when app is open</span></div>
+      </div>
+      <div className="px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+        <button
+          onClick={() => { cancelScheduledPayment(userAddress!, entry.id); setCancelled(true) }}
+          className="w-full py-1.5 rounded text-xs font-medium"
+          style={{ backgroundColor: 'rgba(255,107,107,0.1)', color: '#FF6B6B' }}
+        >
+          Cancel Scheduled Payment
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function ContactActionCard({ qr, userAddress }: { qr: any; userAddress?: string }) {

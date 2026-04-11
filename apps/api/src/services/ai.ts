@@ -43,7 +43,10 @@ CATEGORIES & COMMANDS:
 - "pay 50 USDC to 0x..." → payment, queryType: direct
 - "split $300 between 3 wallets" → payment, queryType: split
 - "send money to Argentina in USDC" → payment, queryType: crossborder
-- "set up recurring payment $100 monthly" → payment, queryType: recurring
+- "set up a recurring payment of $100 monthly" → payment, queryType: recurring
+- "send hassan 0.1 SOL on april 15" → payment, queryType: scheduled, scheduleDate: "april 15"
+- "send 0.1 SOL to azeem tomorrow" → payment, queryType: scheduled, scheduleDate: "tomorrow"
+- "pay 50 USDC to bob in 3 days" → payment, queryType: scheduled, scheduleDate: "in 3 days"
 - "send anonymous payroll" → payment, queryType: private
 - "create payment request link for 50 USDC" → payment, queryType: request_link
 - "send ETH and auto-convert to USDC on arrival" → payment, queryType: swap_send
@@ -116,6 +119,7 @@ Response format:
   "memo": null,
   "contactName": null,
   "contactAddress": null,
+  "scheduleDate": null,
   "clarificationNeeded": false,
   "clarificationQuestion": null
 }
@@ -161,6 +165,10 @@ Reply: Generating your Solana Pay link for 50 USDC.
 User: "what did I spend on payments this month?"
 JSON: {"action":"payment","queryType":"spending_summary","chain":"solana"}
 Reply: Pulling your outbound payment summary for this month.
+
+User: "send hassan 0.1 SOL on april 15" / "send 0.1 SOL to azeem tomorrow"
+JSON: {"action":"payment","queryType":"scheduled","tokenIn":"SOL","amountIn":"0.1","recipient":"hassan","scheduleDate":"april 15","chain":"solana"}
+Reply: Scheduling 0.1 SOL to hassan on April 15 — I'll send it automatically when the date arrives.
 
 User: "save this address as hassan: 3Y4Rd..."
 JSON: {"action":"contact","queryType":"save","contactName":"hassan","contactAddress":"3Y4Rd..."}

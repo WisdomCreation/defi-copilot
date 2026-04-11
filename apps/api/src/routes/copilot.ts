@@ -326,6 +326,18 @@ export const copilotRoutes: FastifyPluginAsync = async (app) => {
           });
           aiReply = `Ready to split ${queryResult.total} ${queryResult.token} across ${queryResult.recipients.length} wallets. Review and sign below.`;
 
+        } else if (qt === 'scheduled') {
+          const recipient = intent.recipient || '';
+          const token = intent.tokenIn || 'SOL';
+          const amount = parseFloat(intent.amountIn || intent.amountUsd || '0');
+          if (!recipient || amount <= 0) {
+            aiReply = 'Please specify a recipient and amount, e.g. "send 0.1 SOL to hassan on april 15"';
+          } else {
+            const preview = await buildPaymentPreview({ fromWallet: walletAddress, recipient, token, amount, memo: intent.memo });
+            queryResult = { ...preview, type: 'scheduled_payment_preview', scheduleDate: intent.scheduleDate || '' };
+            aiReply = `Scheduled: ${amount} ${token.toUpperCase()} to ${preview.toDisplay} on ${intent.scheduleDate || 'the specified date'}. I'll send it automatically when the date arrives.`;
+          }
+
         } else if (qt === 'direct' || qt === 'crossborder' || qt === 'swap_send' || qt === 'private') {
           const recipient = intent.recipient || '';
           const token = intent.tokenIn || 'SOL';
